@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Seguimiento de Coordinadoras</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+/* ============ VARIABLES Y BASE ============ */
+:root{--y:#FFC400;--y2:#FFF3BF;--k:#141414;--k2:#242424;--g1:#F3F3F0;--g2:#E4E4DF;--g3:#85857F;--t:#1B1B1B;
+  --r:#D92D20;--o:#E98300;--gr:#1B9A55;--b:#2459C9;--rad:14px;--sh:0 1px 2px rgba(0,0,0,.05),0 4px 14px rgba(0,0,0,.04)}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Manrope',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--g1);color:var(--t);font-size:14px;line-height:1.45}
+h1,h2,h3,h4{margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:inherit}
+/* ============ MENÚ LATERAL ============ */
+.side{width:236px;background:var(--k);color:#fff;position:fixed;inset:0 auto 0 0;display:flex;flex-direction:column;z-index:50;transition:transform .2s}
+.brand{padding:20px 18px 16px;display:flex;gap:11px;align-items:center;font-weight:800;font-size:15px;line-height:1.2}
+.brand small{display:block;font-weight:500;color:#9a9a94;font-size:11px}
+.nav{flex:1;overflow:auto;padding:6px 10px}
+.nav a{display:flex;gap:12px;align-items:center;padding:10px 12px;margin:2px 0;border-radius:10px;color:#bdbdb7;cursor:pointer;font-weight:600;font-size:13.5px}
+.nav a svg{width:18px;height:18px;flex:none}
+.nav a:hover{background:var(--k2);color:#fff}
+.nav a.on{background:var(--y);color:var(--k)}
+.side-f{padding:14px 18px;font-size:11px;color:#77776f;border-top:1px solid #2a2a2a}
+.velo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:45}
+/* ============ BARRA SUPERIOR ============ */
+.cont{margin-left:236px;min-height:100vh}
+.top{position:sticky;top:0;z-index:30;background:#fff;border-bottom:1px solid var(--g2);padding:12px 24px;display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center}
+.top h1{font-size:19px;font-weight:800;flex:1;min-width:150px}
+.ham{display:none;border:0;background:var(--g1);border-radius:9px;width:38px;height:38px;cursor:pointer;font-size:18px}
+.filtros{display:flex;gap:8px;flex-wrap:wrap;width:100%}
+.filtros select{flex:1 1 130px;max-width:230px}
+.bell{position:relative;border:0;background:var(--g1);border-radius:9px;width:38px;height:38px;cursor:pointer;font-size:16px}
+.bell span{position:absolute;top:-5px;right:-5px;background:var(--r);color:#fff;border-radius:99px;font-size:10px;font-weight:800;padding:1px 6px}
+.bell span:empty{display:none}
+main{padding:20px 24px 60px;max-width:1500px}
+/* ============ CONTROLES ============ */
+input,select,textarea{border:1px solid var(--g2);border-radius:9px;padding:8px 10px;background:#fff;width:100%;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--k);box-shadow:0 0 0 3px var(--y2)}
+input[readonly],input:disabled,select:disabled{background:var(--g1);color:#666}
+textarea{min-height:64px;resize:vertical}
+.btn{display:inline-flex;align-items:center;gap:7px;border:1px solid transparent;border-radius:9px;padding:8px 14px;font-weight:700;cursor:pointer;white-space:nowrap;text-decoration:none;font-size:13.5px}
+.btn-y{background:var(--y);color:var(--k)}.btn-y:hover{background:#f0b800}
+.btn-k{background:var(--k);color:#fff}.btn-k:hover{background:#333}
+.btn-o{background:#fff;border-color:var(--g2)}.btn-o:hover{border-color:var(--k)}
+.btn-d{background:#fff;border-color:#f3c2be;color:var(--r)}.btn-d:hover{background:#fdecea}
+.btn-s{padding:5px 10px;font-size:12.5px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.bar .sp{flex:1}
+.bar input,.bar select{width:auto;flex:0 1 180px}
+.seg{display:inline-flex;background:var(--g1);border-radius:9px;padding:3px}
+.seg button{border:0;background:none;padding:6px 12px;border-radius:7px;font-weight:700;cursor:pointer}
+.seg button.on{background:var(--k);color:#fff}
+/* ============ TARJETAS / KPIs ============ */
+.card{background:#fff;border-radius:var(--rad);box-shadow:var(--sh);padding:18px}
+.card h3{font-size:15px;font-weight:800;margin-bottom:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.grp{margin-bottom:18px}
+.grp>h4{font-size:11.5px;letter-spacing:.09em;color:var(--g3);margin:0 0 8px;display:flex;align-items:center;gap:8px}
+.grp>h4:before{content:"";width:18px;height:4px;border-radius:2px;background:var(--y)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.kpi{background:#fff;border-radius:12px;padding:13px 14px;box-shadow:var(--sh);border-left:4px solid var(--g2)}
+.kpi small{display:block;color:var(--g3);font-weight:600;font-size:11.5px}
+.kpi b{font-size:21px;font-weight:800;letter-spacing:-.01em}
+.kpi.y{border-color:var(--y)}.kpi.r{border-color:var(--r)}.kpi.r b{color:var(--r)}.kpi.o{border-color:var(--o)}.kpi.g{border-color:var(--gr)}.kpi.k{border-color:var(--k)}
+.cols{display:grid;gap:16px;margin-bottom:16px}
+.c2{grid-template-columns:repeat(2,minmax(0,1fr))}.c3{grid-template-columns:repeat(3,minmax(0,1fr))}.c13{grid-template-columns:minmax(0,1fr) minmax(0,2fr)}
+.ch{position:relative;height:260px}
+.grid-c{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px}
+.cc-h{display:flex;gap:12px;align-items:center;margin-bottom:12px}
+.cc-h b{display:block;font-size:15px}.cc-h small{color:var(--g3)}
+.cc-n{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:12px 0;text-align:center}
+.cc-n div{background:var(--g1);border-radius:9px;padding:7px 2px}
+.cc-n b{display:block;font-size:16px}.cc-n small{font-size:10px;color:var(--g3);font-weight:600}
+.cc-n .neg{background:#fdecea}.cc-n .neg b{color:var(--r)}
+.cc-a{display:flex;gap:8px;flex-wrap:wrap}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.prog{height:8px;background:var(--g2);border-radius:99px;overflow:hidden;margin-top:5px}
+.prog i{display:block;height:100%;background:var(--y);border-radius:99px}
+.prog i.ok{background:var(--gr)}.prog i.lo{background:var(--r)}
+.av{border-radius:50%;object-fit:cover;flex:none;background:var(--y);color:var(--k);display:grid;place-items:center;font-weight:800}
+.demo{font-size:9.5px;font-weight:800;background:var(--k);color:var(--y);border-radius:5px;padding:1px 5px;margin-left:6px;vertical-align:middle;letter-spacing:.04em}
+.banner{background:var(--y2);border:1px solid var(--y);border-radius:12px;padding:10px 14px;margin-bottom:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-weight:600}
+.banner .sp{flex:1}
+/* ============ TABLAS ============ */
+.tw{overflow-x:auto}
+table.tb{width:100%;border-collapse:collapse;font-size:13px}
+.tb th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--g3);padding:9px 10px;border-bottom:2px solid var(--g2);white-space:nowrap}
+.tb td{padding:9px 10px;border-bottom:1px solid var(--g1);vertical-align:middle}
+.tb tr:hover td{background:#fafaf7}
+.tb tr.venc td{background:#fff5f4}
+.tb .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tb tfoot td{font-weight:800;border-top:2px solid var(--k);border-bottom:0}
+.tb input{padding:6px 8px;text-align:right;max-width:190px}
+.vacio{text-align:center;color:var(--g3);padding:26px 10px}
+.badge{display:inline-block;border-radius:99px;padding:2px 9px;font-size:11.5px;font-weight:700;white-space:nowrap}
+.b-r{background:#fdecea;color:var(--r)}.b-o{background:#fff0dc;color:#b86200}.b-y{background:var(--y2);color:#7a5c00}.b-g{background:#e3f6ec;color:#12713d}.b-n{background:var(--g1);color:#555}.b-b{background:#e6edfb;color:var(--b)}
+.drop{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;border:2px dashed var(--y);background:var(--y2);border-radius:12px;padding:26px 16px;margin-bottom:14px;cursor:pointer}
+.drop b{font-size:17px}.drop span{color:#6b5a14;font-size:12.5px}.drop:hover,.drop.on{background:var(--y)}
+/* logo */
+.logo{flex:none;width:40px;height:40px;border-radius:10px;background:var(--y);color:var(--k);display:grid;place-items:center;font-weight:800;font-size:18px;cursor:pointer;overflow:hidden;position:relative}
+.logo img{width:100%;height:100%;object-fit:contain;background:#fff}
+.side .logo:hover:after{content:"✎";position:absolute;inset:0;background:rgba(0,0,0,.55);color:#fff;display:grid;place-items:center;font-size:15px}
+.b-k{background:var(--k);color:var(--y)}
+/* tablero de pendientes */
+.pboard{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px;align-items:start}
+.pp{background:var(--g1);border-radius:12px;display:flex;flex-direction:column;max-height:600px;border:1px solid var(--g2)}
+.pp-h{display:flex;gap:10px;align-items:center;padding:12px;border-bottom:1px solid var(--g2)}
+.pp-h small{display:block;color:var(--g3);font-size:11.5px;font-weight:600}
+.pp-i{width:36px;height:36px;border-radius:50%;background:var(--y);display:grid;place-items:center;font-size:17px;flex:none}
+.pp-c{margin-left:auto;background:var(--k);color:#fff;border-radius:99px;padding:2px 10px;font-weight:800;font-size:12px}
+.pp.lid{background:var(--y2);border:2px solid var(--y)}.pp.lid .pp-h{background:var(--k);color:#fff;border-radius:10px 10px 0 0}.pp.lid .pp-h small{color:#bbb}.pp.lid .pp-c{background:var(--y);color:var(--k)}
+.pp-b{padding:10px;overflow:auto;display:flex;flex-direction:column;gap:8px}
+.pm{background:#fff;border-radius:10px;padding:10px 12px;box-shadow:var(--sh);cursor:pointer;border-left:4px solid var(--g2);display:flex;flex-direction:column;gap:4px}
+.pm:hover{outline:2px solid var(--y)}.pm small{color:var(--g3);font-size:12px}.pm .uc{background:var(--g1);border-radius:6px;padding:4px 6px;color:#555}
+.pm.venc{border-color:var(--r)}.pm.hoy{border-color:var(--o)}.pm.prox{border-color:var(--y)}.pm.ok{border-color:var(--gr);opacity:.75}
+/* visitas: pendientes */
+.pend-box{background:var(--y2);border:1px solid var(--y);border-radius:12px;padding:12px}
+.chk{display:flex;gap:10px;align-items:flex-start;background:#fff;border:2px solid var(--k);border-radius:10px;padding:10px 12px;margin-top:10px;cursor:pointer}
+.chk input{width:20px;height:20px;flex:none;margin:1px 0 0;accent-color:var(--k)}.chk small{display:block;color:var(--g3);font-size:12px}
+.gen{margin-top:10px;display:flex;flex-direction:column;gap:6px}.gen a{background:#fff;border-radius:8px;padding:6px 8px;cursor:pointer;font-size:13px}.gen a:hover{outline:2px solid var(--k)}
+/* novedades: documentos requeridos */
+.req{background:#fff8dc;border:1px solid var(--y);border-left:5px solid var(--y);border-radius:10px;padding:12px 14px}
+.req h5{margin:0 0 4px;font-size:14px}.req p{margin:0 0 8px;font-size:12.5px;color:#5c4f1f}
+.req-g{background:#fff;border-radius:8px;padding:8px 10px;margin-bottom:6px}.req-g>b{display:block;font-size:12px;margin-bottom:4px}
+.ck{display:flex;gap:8px;align-items:flex-start;font-size:13px;padding:3px 0;cursor:pointer}.ck input{width:16px;height:16px;flex:none;margin-top:2px;accent-color:var(--gr)}
+.vacio-r{color:var(--g3);background:var(--g1);border-color:var(--g2);border-left-color:var(--g3)}
+.af{display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--g2);border-radius:10px;margin-bottom:6px}
+.af>div{flex:1;min-width:0}.af b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}.af small{color:var(--g3);font-size:11.5px}
+.fi{flex:none;font-size:10px;font-weight:800;border-radius:6px;padding:5px 6px;color:#fff}.fi.pdf{background:var(--r)}.fi.xls{background:var(--gr)}
+/* documentos por mes */
+.meses{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.mes{border:1px solid var(--g2);background:var(--g1);border-radius:10px;padding:12px;text-align:left;cursor:pointer}
+.mes b{display:block}.mes small{color:var(--g3);font-size:11.5px}.mes:hover{border-color:var(--k)}.mes.on{background:var(--k);color:#fff;border-color:var(--k)}.mes.on small{color:var(--y)}
+/* matriz de provisiones */
+.mat{max-height:68vh;overflow:auto;border:1px solid var(--g2);border-radius:10px}
+.mat table{font-size:12.5px}.mat th{position:sticky;top:0;background:#fff;z-index:2}
+.mat .fix{position:sticky;left:0;background:#fff;z-index:1;min-width:190px;max-width:230px;box-shadow:1px 0 0 var(--g2)}.mat th.fix{z-index:3}
+.mat td.fix small{display:block;color:var(--g3);font-size:11px}
+.mat td{padding:4px 4px}.mat .pc{width:100%;min-width:96px;max-width:none;padding:6px;text-align:right;border-color:transparent;background:transparent;font-variant-numeric:tabular-nums}
+.mat .pc:hover{border-color:var(--g2);background:#fff}.mat .pc:focus{border-color:var(--k);background:#fff}
+.mat .mact{background:#fffbe8}.mat tfoot td{position:sticky;bottom:0;background:var(--y2)}.mat tfoot .fix{background:var(--y2)}
+.mat td.baja{background:#fdecea}.mat td.sube{background:#e3f6ec}.mat td{position:relative}
+.mat td>i{position:absolute;top:2px;right:4px;font-style:normal;font-size:9px}.mat td.baja>i{color:var(--r)}.mat td.sube>i{color:var(--gr)}
+.lg{display:inline-block;border-radius:5px;padding:0 6px;font-weight:700}.lg.baja{background:#fdecea;color:var(--r)}.lg.sube{background:#e3f6ec;color:var(--gr)}
+#acceso{position:fixed;inset:0;z-index:300;background:var(--k);display:none;align-items:center;justify-content:center;padding:16px}
+.acc-card{background:#fff;border-radius:18px;padding:30px 26px;width:100%;max-width:380px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+.acc-card h2{font-size:19px;font-weight:800;margin-bottom:6px}.acc-card .logo{display:grid}
+.quien{font-weight:700;font-size:13px;background:var(--g1);border-radius:9px;padding:8px 12px;white-space:nowrap}
+#sesion{display:flex;gap:8px;align-items:center}
+/* ============ FORMULARIOS / MODAL ============ */
+.fg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.fld{display:block}.fld>span{display:block;font-size:12px;font-weight:700;margin-bottom:4px;color:#444}
+.full{grid-column:1/-1}
+.sep{grid-column:1/-1;font-weight:800;border-top:1px solid var(--g2);padding-top:12px;margin-top:4px}
+.acc{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-top:16px}
+.hint{color:var(--g3);font-size:12px;margin:6px 0 0}
+.modal{position:fixed;inset:0;background:rgba(10,10,10,.55);z-index:100;display:none;align-items:flex-start;justify-content:center;padding:4vh 12px;overflow:auto}
+.modal.on{display:flex}
+.mbox{background:#fff;border-radius:16px;width:100%;max-width:640px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.mbox.ancho{max-width:980px}
+.mbox header{display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--g2)}
+.mbox header h3{flex:1;font-size:16px;font-weight:800}
+.mbox header button{border:0;background:var(--g1);width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:18px}
+.mbody{padding:18px 20px 20px}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--k);color:#fff;padding:11px 18px;border-radius:10px;font-weight:700;z-index:200;transition:transform .25s,opacity .25s;opacity:0;pointer-events:none;border-left:5px solid var(--y);max-width:90vw}
+.toast.on{transform:translateX(-50%);opacity:1}.toast.err{border-color:var(--r)}
+.foto-ed{display:flex;gap:16px;align-items:center;margin-bottom:14px}
+.tl{list-style:none;margin:0;padding:0;max-height:260px;overflow:auto}
+.tl li{border-left:3px solid var(--y);padding:6px 0 6px 12px;margin-bottom:8px}
+.tl li.sys{border-color:var(--g2);color:#666;font-size:12.5px}
+.tl small{color:var(--g3);display:block}
+.traza{font-size:11.5px;color:var(--g3);margin-top:12px}
+/* ============ CALENDARIO ============ */
+.cal-h{display:grid;grid-template-columns:repeat(7,1fr);font-size:11px;font-weight:800;color:var(--g3);text-transform:uppercase;padding:6px 0}
+.cal-h div{padding-left:6px}
+.cal-g{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.cd{background:var(--g1);border-radius:9px;min-height:104px;padding:5px;cursor:pointer;overflow:hidden}
+.cd:hover{outline:2px solid var(--y)}
+.cd.out{opacity:.45}.cd.hoy{background:var(--y2);outline:2px solid var(--y)}
+.cd-n{font-weight:800;font-size:12px;display:block;margin-bottom:3px}
+.chip{font-size:11px;border-radius:5px;padding:2px 5px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-left:3px solid;background:#fff;cursor:pointer}
+.e-p{border-color:var(--y)}.e-r{border-color:var(--gr)}.e-x{border-color:var(--o)}.e-c{border-color:var(--g3);text-decoration:line-through;color:#888}
+.mas{font-size:11px;font-weight:700;text-decoration:underline;cursor:pointer}
+.cal-s{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
+.cal-s>div{background:var(--g1);border-radius:10px;padding:8px;min-height:180px;cursor:pointer}
+.cal-s>div.hoy{background:var(--y2)}
+.cal-s h5{margin:0 0 8px;font-size:12px}
+.vc{background:#fff;border-left:4px solid;border-radius:8px;padding:8px 10px;margin-bottom:6px;cursor:pointer;box-shadow:var(--sh)}
+.vc b{display:block;font-size:12.5px}.vc small{display:block;color:var(--g3);margin-bottom:3px}
+.ley{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font-size:12px}
+.ley span:before{content:"";display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;background:var(--c)}
+.al{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--g1)}
+.al:last-child{border:0}.al>div{flex:1;min-width:0}.al small{color:var(--g3);display:block}
+/* ============ RESPONSIVE ============ */
+@media(max-width:1100px){.c3{grid-template-columns:repeat(2,minmax(0,1fr))}.c13{grid-template-columns:1fr}}
+@media(max-width:900px){
+  .side{transform:translateX(-100%)}body.menu .side{transform:none}body.menu .velo{display:block}
+  .cont{margin-left:0}.ham{display:block}.top{padding:10px 14px}main{padding:14px 12px 60px}
+  .c2,.c3{grid-template-columns:1fr}.cal-s{grid-template-columns:1fr}.cal-s>div{min-height:0}
+}
+@media(max-width:600px){#btn-imp{font-size:0;gap:0}#btn-imp:before{content:'⬆ Excel';font-size:13px}.fg{grid-template-columns:1fr}.cd{min-height:62px}.chip{font-size:0;height:6px;padding:0;border-left-width:22px}.top h1{font-size:16px}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.kpi b{font-size:17px}}
+</style>
+</head>
+<body>
+<aside class="side">
+  <div class="brand"><label class="logo" title="Clic para cargar o cambiar el logo"><span id="logo">S</span><input type="file" accept="image/*" hidden onchange="cargarLogo(this)"></label><div>Seguimiento<small>Coordinadoras de proyectos</small></div></div>
+  <nav class="nav" id="nav"></nav>
+  <div class="side-f" id="nube">Datos guardados en este navegador</div>
+</aside>
+<div class="velo" onclick="document.body.classList.remove('menu')"></div>
+<div class="cont">
+  <header class="top">
+    <button class="ham" onclick="document.body.classList.toggle('menu')" aria-label="Menú">☰</button>
+    <h1 id="titulo"></h1>
+    <label class="btn btn-y" id="btn-imp" title="Cargar o actualizar la base de clientes desde Excel">⬆ Importar Excel<input type="file" accept=".xlsx,.xls" hidden onchange="leerExcel(this)"></label>
+    <button class="bell" onclick="ir('alertas')" title="Alertas">🔔<span id="n-al"></span></button>
+    <div id="sesion" style="min-width:190px"></div>
+    <div class="filtros" id="filtros"></div>
+  </header>
+  <main id="main"></main>
+</div>
+<div class="modal" id="modal"><div class="mbox" id="mbox"><header><h3 id="m-t"></h3><button onclick="cerrarModal()" aria-label="Cerrar">×</button></header><div class="mbody" id="m-b"></div></div></div>
+<div class="toast" id="toast"></div>
+<div id="acceso"></div>
+
+<!-- ===== Conexión a Firebase (proyecto seguimiento-coordinadoras) ===== -->
+<script>
+window.FIREBASE_CONFIG={apiKey:"AIzaSyB5MgQY49yYBX-xByQFx1m9L4PxWplhnao",authDomain:"seguimiento-coordinadoras.firebaseapp.com",projectId:"seguimiento-coordinadoras",
+  storageBucket:"seguimiento-coordinadoras.firebasestorage.app",messagingSenderId:"593472555486",appId:"1:593472555486:web:2cec4e36cf6ada6251b54f"};
+window.LIDER_EMAIL="poved31421@gmail.com";
+</script>
+<script type="module">
+/* Adaptador: la plataforma solo usa window.Nube; aquí se traduce a Firebase */
+import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,signOut,sendPasswordResetEmail} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {getFirestore,collection,doc,onSnapshot,writeBatch,getDoc,setDoc,deleteDoc} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+const app=initializeApp(window.FIREBASE_CONFIG),auth=getAuth(app),fs=getFirestore(app);
+window.Nube={
+  onAuth:cb=>onAuthStateChanged(auth,u=>cb(u?{email:String(u.email||'').toLowerCase()}:null)),
+  login:(e,p)=>signInWithEmailAndPassword(auth,e,p),
+  salir:()=>signOut(auth),
+  reset:e=>sendPasswordResetEmail(auth,e),
+  escuchar:(col,cb,err)=>onSnapshot(collection(fs,col),s=>cb(s.docs.map(d=>({id:d.id,data:d.data()})),s.metadata.hasPendingWrites),err),
+  leer:async(col,id)=>{const d=await getDoc(doc(fs,col,id));return d.exists()?d.data():null},
+  poner:(col,id,data)=>setDoc(doc(fs,col,id),data),
+  quitar:(col,id)=>deleteDoc(doc(fs,col,id)),
+  lote:async ops=>{for(let i=0;i<ops.length;i+=400){const b=writeBatch(fs);
+    ops.slice(i,i+400).forEach(o=>o.del?b.delete(doc(fs,o.col,o.id)):b.set(doc(fs,o.col,o.id),o.data));await b.commit()}}
+};
+window.dispatchEvent(new Event('nube-lista'));
+</script>
+<script>
+'use strict';
+/* =====================================================================
+   PLATAFORMA DE SEGUIMIENTO DE COORDINADORAS
+   Índice del código:
+   1. Utilidades            6. Componentes de interfaz     11. Provisiones / Facturación
+   2. Almacenamiento        7. Dashboard y Alertas         12. Inicio de operaciones
+   3. Datos y trazabilidad  8. Coordinadoras               13. Reportes y exportación
+   4. Reglas de cálculo     9. Clientes + importar Excel   14. Configuración
+   5. Datos de prueba      10. Calendario y Pendientes     15. Navegación e inicio
+   ===================================================================== */
+
+/* ---------- 1. UTILIDADES ---------- */
+const $=(s,r=document)=>r.querySelector(s);
+const MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const pad=n=>String(n).padStart(2,'0');
+const iso=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const hoy=()=>iso(new Date());
+const ahora=()=>new Date().toISOString();
+const toDate=s=>{const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)};
+const addDias=(s,n)=>{const d=toDate(s);d.setDate(d.getDate()+n);return iso(d)};
+const diasEntre=(a,b)=>Math.round((toDate(b)-toDate(a))/864e5);
+const fFecha=s=>s?`${s.slice(8,10)}/${s.slice(5,7)}/${s.slice(0,4)}`:'—';
+const fFechaHora=s=>{if(!s)return'—';const d=new Date(s);return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`};
+const fNum=n=>Math.round(n||0).toLocaleString('es-CO');
+const fCOP=n=>'$ '+fNum(n);
+const pct=(a,b)=>b?Math.round(a/b*100):0;
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const norm=s=>String(s??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+const parseMoney=s=>Number(String(s).replace(/[^\d-]/g,''))||0;
+const sum=a=>a.reduce((x,y)=>x+(Number(y)||0),0);
+
+/* ---------- 2. ALMACENAMIENTO ----------
+   Toda la persistencia pasa por este objeto. Para conectar Google Sheets,
+   Firebase o Supabase basta con reemplazar cargar() y guardar(). */
+const Almacen={
+  CLAVE:'seguimiento_coordinadoras_v1',
+  cargar(){try{return JSON.parse(localStorage.getItem(this.CLAVE))}catch(e){return null}},
+  guardar(d){try{localStorage.setItem(this.CLAVE,JSON.stringify(d));return true}
+    catch(e){toast('No se pudo guardar: almacenamiento del navegador lleno','err');return false}}
+};
+const baseVacia=()=>({version:2,coordinadoras:[],clientes:[],visitas:[],pendientes:[],provisiones:[],facturas:[],novedades:[],permisos:[],documentos:[],auditoria:[],
+  config:{lider:'Líder de operaciones',importacion:null}});
+const MODO_NUBE=!!window.FIREBASE_CONFIG,LIDER_EMAIL=String(window.LIDER_EMAIL||'').toLowerCase();
+let db=MODO_NUBE?null:Almacen.cargar();
+/* Sesión del usuario: es local, nunca se comparte */
+let SESION={rol:'lider',coordId:'',email:'',real:'lider'};
+const HOY=new Date();
+/* Estado de la interfaz (no se persiste) */
+const S={vista:'dashboard',f:{anio:HOY.getFullYear(),mes:HOY.getMonth()+1,coord:'',cliente:''},cal:{modo:'mes',fecha:hoy()},
+  charts:[],detalle:'',pmodo:'tablero',pComp:false,per:{q:'',tipo:'',estado:''},doc:{mes:0,q:'',cat:''},pf:{coord:'',cliente:'',prioridad:'',estado:'',desde:'',hasta:'',alerta:'',q:''},cf:{q:'',estado:''},
+  prov:{q:'',solo:false,modo:'prov'},fac:{q:'',solo:false},rep:{grupo:'cliente'},imp:null,fotoTmp:''};
+
+/* ---------- 3. DATOS Y TRAZABILIDAD ---------- */
+const coord=id=>db.coordinadoras.find(c=>c.id===id);
+const cliente=id=>db.clientes.find(c=>c.id===id);
+const nomCoord=id=>coord(id)?.nombre||'Sin asignar';
+const nomCli=id=>cliente(id)?.nombre||'(cliente eliminado)';
+const coordDe=cid=>cliente(cid)?.coordId||'';
+const esLider=()=>SESION.rol==='lider';
+function usuario(){const s=SESION;return s.rol==='coord'?nomCoord(s.coordId):db.config.lider}
+function guardar(){_fx=null;if(MODO_NUBE){if(cargaNube===true)subirNube();return}Almacen.guardar(db)}
+/* Registro global de acciones (quién, cuándo, qué) */
+function auditar(modulo,accion,detalle){db.auditoria.unshift({id:uid(),fecha:ahora(),usuario:usuario(),modulo,accion,detalle});if(db.auditoria.length>3000)db.auditoria.length=3000}
+function crear(col,obj,modulo,det){const u=usuario(),r={id:uid(),...obj,creadoEn:ahora(),actualizadoEn:ahora(),creadoPor:u,actualizadoPor:u,historial:[]};db[col].push(r);auditar(modulo,'Creación',det);return r}
+/* Al cambiar un estado se conserva el historial dentro del registro */
+function actualizar(r,cambios,modulo,det){
+  if(cambios.estado!==undefined&&cambios.estado!==r.estado){(r.historial=r.historial||[]).push({fecha:ahora(),usuario:usuario(),de:r.estado,a:cambios.estado});det+=` (estado: ${r.estado} → ${cambios.estado})`}
+  Object.assign(r,cambios);r.actualizadoEn=ahora();r.actualizadoPor=usuario();auditar(modulo,'Modificación',det)}
+function eliminar(col,id,modulo,det){db[col]=db[col].filter(x=>x.id!==id);auditar(modulo,'Eliminación',det)}
+/* Alcance según rol y filtros generales */
+const coordFiltro=()=>SESION.rol==='coord'?SESION.coordId:S.f.coord;
+const clientesRol=()=>{const s=SESION;return db.clientes.filter(c=>s.rol!=='coord'||c.coordId===s.coordId)};
+const clientesVis=()=>{const c=coordFiltro();return db.clientes.filter(x=>(!c||x.coordId===c)&&(!S.f.cliente||x.id===S.f.cliente))};
+const idsVis=()=>new Set(clientesVis().map(c=>c.id));
+const coordsVis=()=>{const c=coordFiltro(),cc=S.f.cliente&&coordDe(S.f.cliente);return db.coordinadoras.filter(x=>(!c||x.id===c)&&(!S.f.cliente||x.id===cc))};
+const enPeriodo=f=>!!f&&Number(f.slice(0,4))===Number(S.f.anio)&&(!S.f.mes||Number(f.slice(5,7))===Number(S.f.mes));
+const visitasVis=(per=true)=>{const ids=idsVis();return db.visitas.filter(v=>ids.has(v.clienteId)&&(!per||enPeriodo(v.fecha)))};
+const pendVis=()=>{const ids=idsVis();return db.pendientes.filter(p=>ids.has(p.clienteId))};
+const novVis=(per=true)=>{const ids=idsVis();return db.novedades.filter(n=>ids.has(n.clienteId)&&(!per||enPeriodo(n.fecha)))};
+
+/* ---------- 4. REGLAS DE CÁLCULO ---------- */
+/* Semáforo de pendientes: vencido (<hoy y no completado), vence hoy, próximo (≤3 días) */
+function alerta(p){
+  if(p.estado==='Completado')return{k:'ok',t:'Completado',cls:'b-g',ico:'🟢'};
+  const d=diasEntre(hoy(),p.fechaLimite);
+  if(d<0)return{k:'venc',t:'Vencido',cls:'b-r',ico:'🔴'};
+  if(d===0)return{k:'hoy',t:'Vence hoy',cls:'b-o',ico:'🟠'};
+  if(d<=3)return{k:'prox',t:'Vence próximamente',cls:'b-y',ico:'🟡'};
+  return{k:'plazo',t:'En plazo',cls:'b-n',ico:'⚪'}}
+const ORD_A={venc:0,hoy:1,prox:2,plazo:3,ok:4},ORD_P={Urgente:0,Alta:1,Normal:2};
+const ordenCrit=a=>[...a].sort((x,y)=>ORD_A[alerta(x).k]-ORD_A[alerta(y).k]||ORD_P[x.prioridad]-ORD_P[y.prioridad]||x.fechaLimite.localeCompare(y.fechaLimite));
+/* Visitas: programadas = todas menos canceladas; cumplimiento = realizadas / programadas */
+function statsVis(vs){const prog=vs.filter(v=>v.estado!=='Cancelada').length,real=vs.filter(v=>v.estado==='Realizada').length;return{prog,real,pct:pct(real,prog)}}
+function statsCoord(id){
+  const ids=new Set(db.clientes.filter(c=>c.coordId===id).map(c=>c.id));
+  const v=statsVis(db.visitas.filter(x=>ids.has(x.clienteId)&&enPeriodo(x.fecha)));
+  const ps=db.pendientes.filter(p=>ids.has(p.clienteId)&&p.estado!=='Completado');
+  return{clientes:ids.size,...v,pend:ps.length,venc:ps.filter(p=>alerta(p).k==='venc').length}}
+const proxVisita=cid=>db.visitas.filter(v=>v.clienteId===cid&&v.fecha>=hoy()&&(v.estado==='Programada'||v.estado==='Reprogramada')).map(v=>v.fecha).sort()[0]||'';
+const ultVisita=cid=>db.visitas.filter(v=>v.clienteId===cid&&v.estado==='Realizada').map(v=>v.fechaReal||v.fecha).sort().pop()||'';
+/* Facturación del mes = ajuste registrado (con novedad) o, si no hay, el valor a facturar fijo del cliente */
+let _fx=null;const fxMap=()=>_fx||(_fx=new Map(db.facturas.map(f=>[f.clienteId+'|'+f.anio+'|'+f.mes,f])));
+const ajuste=(cid,an,m)=>fxMap().get(cid+'|'+Number(an)+'|'+Number(m));
+function valorBase(c,an,m){if(!c||!Number(c.valorMensual)||c.estado==='Inactivo')return 0;const ym=`${an}-${pad(m)}`;
+  if(c.fechaInicio&&c.fechaInicio.slice(0,7)>ym)return 0;if(c.fechaFin&&c.fechaFin.slice(0,7)<ym)return 0;return Number(c.valorMensual)}
+function factMes(cid,an,m){const r=ajuste(cid,an,m);return r?Number(r.valor)||0:valorBase(cliente(cid),an,m)}
+const ajustesVis=()=>{const ids=idsVis(),an=Number(S.f.anio);return db.facturas.filter(f=>ids.has(f.clienteId)&&f.anio===an).map(f=>({...f,base:valorBase(cliente(f.clienteId),an,f.mes)})).sort((a,b)=>a.mes-b.mes||nomCli(a.clienteId).localeCompare(nomCli(b.clienteId)))};
+/* Financiero: la provisión es de ADICIONALES → total real = facturación + provisión */
+function fin(ids,anio,mes){let prov=0,fact=0;anio=Number(anio);
+  db.provisiones.forEach(p=>{if(ids.has(p.clienteId)&&p.anio===anio)prov+=mes?(p.valores[mes-1]||0):sum(p.valores)});
+  ids.forEach(cid=>{if(mes)fact+=factMes(cid,anio,Number(mes));else for(let m=1;m<=12;m++)fact+=factMes(cid,anio,m)});
+  return{prov,fact,real:prov+fact,pp:pct(prov,prov+fact)}}
+function statsNov(ns){const a=ns.filter(n=>n.estado==='Abierto').length,s=ns.filter(n=>n.estado==='En seguimiento').length,o=ns.filter(n=>n.estado==='Solucionado').length;return{total:ns.length,a,s,o,pct:pct(o,ns.length)}}
+/* Sistema de alertas */
+function alertas(){
+  const A=[],h=hoy(),ids=idsVis();
+  pendVis().forEach(p=>{const a=alerta(p);if(a.k==='venc'||a.k==='hoy'||a.k==='prox')A.push({n:ORD_A[a.k],ico:a.ico,t:`Pendiente ${a.t.toLowerCase()}: ${p.descripcion}`,d:`${nomCli(p.clienteId)} · ${nomCoord(coordDe(p.clienteId))} · límite ${fFecha(p.fechaLimite)}`,fn:`formPendiente('${p.id}')`})});
+  db.visitas.filter(v=>ids.has(v.clienteId)&&(v.estado==='Programada'||v.estado==='Reprogramada')).forEach(v=>{const d=diasEntre(h,v.fecha);
+    if(d<0)A.push({n:1.5,ico:'🟠',t:`Visita sin registrar desde ${fFecha(v.fecha)}`,d:`${nomCli(v.clienteId)} · ${nomCoord(coordDe(v.clienteId))} · sigue como "${v.estado}"`,fn:`formVisita('${v.id}')`});
+    else if(d<=3)A.push({n:4,ico:'📅',t:`Visita próxima: ${d===0?'hoy':fFecha(v.fecha)} ${v.hora||''}`,d:`${nomCli(v.clienteId)} · ${nomCoord(coordDe(v.clienteId))}`,fn:`formVisita('${v.id}')`})});
+  db.novedades.filter(n=>ids.has(n.clienteId)&&n.estado==='Abierto').forEach(n=>A.push({n:3,ico:'🟠',t:`Novedad abierta: ${n.novedad}${n.persona?' · '+n.persona:''}`,d:`${nomCli(n.clienteId)} · ${fFecha(n.fecha)}`,fn:`formNovedad('${n.id}')`}));
+  db.permisos.filter(p=>ids.has(p.clienteId)&&p.estado==='Pendiente de documentos').forEach(p=>A.push({n:3.8,ico:'📎',t:`Novedad sin documentos completos: ${p.nombre} (${p.tipo})`,d:`${nomCli(p.clienteId)} · desde ${fFecha(p.fechaDesde)}`,fn:`formPermiso('${p.id}')`}));
+  const conVis=new Set(db.visitas.map(v=>v.clienteId));
+  clientesVis().filter(c=>c.estado!=='Inactivo'&&!conVis.has(c.id)).forEach(c=>A.push({n:5,ico:'⚪',t:`Cliente sin visitas registradas: ${c.nombre}`,d:nomCoord(c.coordId),fn:`ir('calendario')`}));
+  return A.sort((a,b)=>a.n-b.n)}
+
+/* ---------- 5. DATOS DE PRUEBA (marcados con demo:true, se eliminan desde Configuración) ---------- */
+function sembrarDemo(){
+  let s=11;const rnd=()=>(s=(s*16807)%2147483647)/2147483647,pick=a=>a[Math.floor(rnd()*a.length)];
+  const mk=(col,o)=>{const r={id:uid(),...o,demo:true,creadoEn:ahora(),actualizadoEn:ahora(),creadoPor:'Datos de prueba',actualizadoPor:'Datos de prueba',historial:[]};db[col].push(r);return r};
+  const cs=['Laura Méndez Rojas','Carolina Pardo Gil','Diana Castaño Ruiz','Paola Herrera Vega','Natalia Quintero Mora'].map(n=>mk('coordinadoras',{nombre:n,correo:'',telefono:'',foto:''}));
+  const emp=['Textiles Andinos','Logística Sabana','Clínica Los Cerezos','Alimentos Don Maíz','Ferretería El Tornillo','Seguros Altavista','Farmacia Vital Norte','Colegio Nueva Aurora','Hotel Mirador Real','Transportes Rutasur','Constructora Piedra Alta','Café Monteverde','Tecnología Nube Sur','Distribuidora La Estación','Laboratorios Biandes','Muebles Roble Fino','Editorial Páramo','Gimnasios Vitalfit','Plásticos del Valle','Centro Comercial Puerta Norte'];
+  const y=HOY.getFullYear(),m=HOY.getMonth(),h=hoy();
+  const cl=emp.map((n,i)=>mk('clientes',{codigo:'DEMO-'+pad(i+1),nombre:n+' (DEMO)',coordId:cs[i%5].id,proyecto:pick(['Outsourcing administrativo','Aseo y cafetería','Mensajería','Recepción','Logística']),ciudad:pick(['Bogotá','Bogotá','Medellín','Cali','Barranquilla']),direccion:`Calle ${10+i} # ${20+i}-${30+i}`,estado:i===19?'Inactivo':'Activo',fechaInicio:`${y-1}-0${1+i%9}-01`,fechaFin:'',observaciones:''}));
+  const TIPOS=['Seguimiento','Auditoría','Comercial','Capacitación'];
+  cl.forEach((c,i)=>{if(i>=18)return; /* dos clientes quedan sin visitas para demostrar la alerta */
+    [[-1,8],[-1,22],[0,3],[0,10],[0,17],[0,24]].forEach(([dm,dia])=>{if(rnd()<.12)return;
+      const fd=new Date(y,m+dm,dia+Math.floor(rnd()*4));if(fd.getDay()===0)fd.setDate(fd.getDate()+1);if(fd.getDay()===6)fd.setDate(fd.getDate()+2);const f=iso(fd),pas=f<h;let est='Programada';
+      if(pas){const r=rnd();est=r<.78?'Realizada':r<.87?'Programada':r<.94?'Reprogramada':'Cancelada'}
+      mk('visitas',{clienteId:c.id,coordId:c.coordId,fecha:f,hora:pick(['08:00','09:30','11:00','14:00','15:30']),tipo:pick(TIPOS),objetivo:'Seguimiento mensual del servicio',comentarios:est==='Realizada'?'Visita realizada sin contratiempos.':'',estado:est,fechaReal:est==='Realizada'?f:'',hallazgos:est==='Realizada'?pick(['Sin hallazgos.','Se evidencia falta de dotación en un puesto.','Cliente solicita refuerzo de personal.']):'',compromisos:'',observaciones:''})})});
+  const desc=['Enviar cotización de personal adicional','Reponer dotación incompleta','Actualizar acta de entrega','Confirmar cronograma de capacitación','Entregar informe mensual','Validar novedad de nómina','Programar reunión de seguimiento','Renovar carné de ingreso'];
+  [[-6,'Urgente','Pendiente'],[-3,'Alta','En proceso'],[-1,'Normal','Pendiente'],[0,'Alta','Pendiente'],[0,'Normal','En proceso'],[1,'Urgente','Pendiente'],[2,'Normal','Pendiente'],[3,'Alta','En proceso'],[5,'Normal','Pendiente'],[8,'Normal','Pendiente'],[12,'Alta','Pendiente'],[-10,'Normal','Completado'],[-2,'Alta','Completado'],[4,'Normal','En proceso']].forEach(([d,pr,es],i)=>{
+    const c=cl[(i*3)%18];mk('pendientes',{clienteId:c.id,coordId:c.coordId,descripcion:desc[i%desc.length],responsable:nomCoord(c.coordId),fechaLimite:addDias(h,d),prioridad:pr,estado:es,visitaId:'',paraLider:i%4===1,
+      comentarios:[{usuario:nomCoord(c.coordId),fecha:ahora(),texto:'Se realizó contacto con el cliente y se encuentra pendiente confirmación.'},...(i%3===0?[{usuario:'Líder de operaciones',fecha:ahora(),texto:'Validar nuevamente el jueves.'}]:[])]})});
+  let nf=1000;
+  cl.forEach(c=>{const base=Math.round((8+rnd()*50))*1e6;if(rnd()<.7)mk('provisiones',{clienteId:c.id,anio:y,valores:MESES.map(()=>rnd()<.5?Math.round(base*(.03+rnd()*.12)/1e5)*1e5:0)});
+    c.valorMensual=base;
+    const AJ=[['Disminución de personal','Se retiraron 2 operarios desde el día 15.'],['Ausentismo / novedades de nómina','Ausentismo de 3 personas sin reemplazo.'],['Días no laborados','Sede cerrada 4 días por remodelación.'],['Descuento por ANS','Descuento por incumplimiento de ANS de entregas.']];
+    if(c.estado!=='Inactivo')for(let mm=1;mm<=m;mm++)if(rnd()<.1){const[t,mo]=pick(AJ);mk('facturas',{clienteId:c.id,anio:y,mes:mm,valor:Math.round(base*(.8+rnd()*.15)/1e5)*1e5,fecha:`${y}-${pad(mm)}-28`,numero:'FE-'+(nf++),motivoTipo:t,motivo:mo})}});
+  const nov=TIPOS_NOV,per=['Jorge Páez','Luisa Moreno','Andrés Cifuentes','Marta Cárdenas','Camilo Ortiz','Yesenia Rincón','Óscar Villamil','Sandra Torres'];
+  for(let i=0;i<16;i++){const c=cl[Math.floor(rnd()*18)],d=Math.floor(rnd()*Math.min(12,HOY.getDate())),es=d>4?'Solucionado':pick(['Abierto','En seguimiento','Solucionado']);
+    mk('novedades',{clienteId:c.id,coordId:c.coordId,fecha:addDias(h,-d),hora:pick(['06:10','06:45','07:20','08:05']),persona:pick(per),novedad:pick(nov),descripcion:'Reportado al inicio del turno.',solucion:es==='Solucionado'?'Se cubrió con personal de apoyo.':'',responsable:nomCoord(c.coordId),estado:es,observaciones:''})}
+  [['Jorge Páez','80123456','Incapacidad',0],['Luisa Moreno','52987654','Calamidad',1],['Andrés Cifuentes','1012345678','Vacaciones',2],['Marta Cárdenas','39456123','Licencia por luto',3]].forEach(([nm,cc,t,k],i)=>{const c=cl[k*4];
+    mk('permisos',{nombre:nm,cc,clienteId:c.id,coordId:c.coordId,tipo:t,fechaDesde:addDias(h,-i*2),fechaHasta:addDias(h,-i*2+2),estado:EST_PER[i%3],docsRecibidos:REQ[t].d.slice(0,i%2+1),archivos:[],observaciones:''})});
+}
+function hayDemo(){return ['coordinadoras','clientes','visitas','pendientes','provisiones','facturas','novedades','permisos','documentos'].some(k=>db[k].some(r=>r.demo))}
+function eliminarDemo(){
+  if(!confirm('Se eliminarán todos los datos de prueba (coordinadoras, clientes, visitas, pendientes, provisiones, facturación y novedades marcados como DEMO), junto con cualquier registro creado sobre clientes de prueba. ¿Continuar?'))return;
+  const cd=new Set(db.clientes.filter(c=>c.demo).map(c=>c.id)),co=new Set(db.coordinadoras.filter(c=>c.demo).map(c=>c.id));
+  ['visitas','pendientes','provisiones','facturas','novedades','permisos','documentos'].forEach(k=>db[k]=db[k].filter(r=>!r.demo&&!cd.has(r.clienteId)));
+  db.clientes=db.clientes.filter(c=>!c.demo);db.clientes.forEach(c=>{if(co.has(c.coordId))c.coordId=''});
+  db.coordinadoras=db.coordinadoras.filter(c=>!c.demo);
+  if(co.has(SESION.coordId)&&SESION.real!=='coord')SESION={...SESION,rol:'lider',coordId:''};
+  S.f.coord=S.f.cliente='';auditar('Configuración','Eliminación','Datos de prueba eliminados');guardar();toast('Datos de prueba eliminados');render()}
+
+/* ---------- 6. COMPONENTES DE INTERFAZ ---------- */
+const ICO={dashboard:'<rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/>',
+  coordinadoras:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+  clientes:'<path d="M3 21h18M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16M9 7h1M14 7h1M9 11h1M14 11h1M9 15h1M14 15h1"/>',
+  calendario:'<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+  pendientes:'<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
+  provisiones:'<path d="M20 12V8H6a2 2 0 0 1 0-4h12v4"/><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/>',
+  facturacion:'<path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1z"/><path d="M8 8h8M8 12h8M8 16h5"/>',
+  inicio:'<circle cx="12" cy="12" r="10"/><path d="M10 8l6 4-6 4z"/>',
+  permisos:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M16 11l2 2 4-4"/>',
+  documentos:'<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>',
+  reportes:'<path d="M3 3v18h18"/><path d="M7 16V9M12 16V5M17 16v-4"/>',
+  config:'<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/>'};
+const ico=k=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICO[k]}</svg>`;
+const EB={Programada:'b-y',Realizada:'b-g',Reprogramada:'b-o',Cancelada:'b-n',Pendiente:'b-y','En proceso':'b-b',Completado:'b-g',Abierto:'b-r','En seguimiento':'b-o',Solucionado:'b-g',Normal:'b-n',Alta:'b-o',Urgente:'b-r',Activo:'b-g',Inactivo:'b-n','Pendiente de documentos':'b-r','En revisión':'b-o',Aprobada:'b-g',Rechazada:'b-n'};
+const ECLS={Programada:'e-p',Realizada:'e-r',Reprogramada:'e-x',Cancelada:'e-c'};
+const badge=t=>`<span class="badge ${EB[t]||'b-n'}">${esc(t||'—')}</span>`;
+const demoTag=r=>r&&r.demo?'<span class="demo">DEMO</span>':'';
+const kpi=(l,v,c='')=>`<div class="kpi ${c}"><small>${l}</small><b>${v}</b></div>`;
+const barra=p=>`<div class="prog"><i class="${p>=90?'ok':p<60?'lo':''}" style="width:${Math.min(p,100)}%"></i></div>`;
+const opts=(arr,v)=>arr.map(o=>{const[val,lab]=Array.isArray(o)?o:[o,o];return `<option value="${esc(val)}" ${String(val)===String(v??'')?'selected':''}>${esc(lab)}</option>`}).join('');
+const campo=(lab,html,cls='')=>`<label class="fld ${cls}"><span>${lab}</span>${html}</label>`;
+const optsCli=(lista,v,vacio)=>(vacio?`<option value="">${vacio}</option>`:'')+opts([...lista].sort((a,b)=>a.nombre.localeCompare(b.nombre)).map(c=>[c.id,c.nombre]),v);
+const optsCoord=(v,vacio)=>(vacio?`<option value="">${vacio}</option>`:'')+opts(db.coordinadoras.map(c=>[c.id,c.nombre]),v);
+const traza=r=>r&&r.creadoEn?`<p class="traza">Creado: ${fFechaHora(r.creadoEn)} por ${esc(r.creadoPor)} · Última actualización: ${fFechaHora(r.actualizadoEn)} por ${esc(r.actualizadoPor)}</p>`:'';
+function avatar(c,t=44){if(c.foto)return `<img class="av" src="${c.foto}" alt="" style="width:${t}px;height:${t}px">`;
+  const ini=(c.nombre||'?').split(/\s+/).slice(0,2).map(x=>x[0]||'').join('').toUpperCase();return `<span class="av" style="width:${t}px;height:${t}px;font-size:${Math.round(t*.36)}px">${esc(ini)}</span>`}
+function abrirModal(t,html,ancho){$('#m-t').textContent=t;$('#m-b').innerHTML=html;$('#mbox').classList.toggle('ancho',!!ancho);$('#modal').classList.add('on');$('#modal').scrollTop=0}
+function cerrarModal(){$('#modal').classList.remove('on');$('#m-b').innerHTML='';if(S.pendRender){S.pendRender=false;setTimeout(render,0)}}
+let tT;function toast(m,tipo){const e=$('#toast');e.textContent=m;e.className='toast on '+(tipo||'');clearTimeout(tT);tT=setTimeout(()=>e.className='toast',2800)}
+/* Gráficos (Chart.js) */
+const COL={y:'#FFC400',k:'#1B1B1B',g:'#C9C9C3',r:'#D92D20',o:'#E98300',gr:'#1B9A55',b:'#2459C9'};
+function grafico(id,cfg){const el=document.getElementById(id);if(!el)return;
+  if(!window.Chart){el.parentNode.innerHTML='<p class="vacio">Gráfico no disponible (se requiere conexión a internet para cargar la librería).</p>';return}
+  cfg.options=Object.assign({responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,usePointStyle:true}}}},cfg.options||{});
+  S.charts.push(new Chart(el,cfg))}
+const ejeCOP={interaction:{mode:'index',intersect:false},scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true,ticks:{callback:v=>'$'+(v/1e6).toLocaleString('es-CO')+' M'}}},plugins:{legend:{position:'bottom',labels:{boxWidth:10,usePointStyle:true}},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${fCOP(c.parsed.y)}`,footer:it=>'Total real: '+fCOP(sum(it.map(x=>x.parsed.y)))}}}};
+const dsPF=(p,f)=>[{label:'Facturación',data:f,backgroundColor:COL.y,stack:'r'},{label:'Provisión adicionales',data:p,backgroundColor:COL.k,stack:'r',borderRadius:{topLeft:5,topRight:5}}];
+const dona=(id,labels,data,colors)=>grafico(id,{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:2}]},options:{cutout:'62%'}});
+
+/* ---------- 7. DASHBOARD Y ALERTAS ---------- */
+function tarjetaCoord(c){const s=statsCoord(c.id),ed=esLider();return `<div class="card">
+  <div class="cc-h">${avatar(c,58)}<div><b>${esc(c.nombre)}${demoTag(c)}</b><small>${s.clientes} clientes asignados</small></div></div>
+  <div class="row"><span>Visitas realizadas</span><b>${s.pct}%</b></div>${barra(s.pct)}
+  <div class="cc-n"><div><b>${s.prog}</b><small>Programadas</small></div><div><b>${s.real}</b><small>Realizadas</small></div><div><b>${s.pend}</b><small>Pend. abiertos</small></div><div class="${s.venc?'neg':''}"><b>${s.venc}</b><small>Vencidos</small></div></div>
+  <div class="cc-a"><button class="btn btn-o btn-s" onclick="verCoord('${c.id}')">Ver detalle</button>${ed?`<button class="btn btn-k btn-s" onclick="formCoord('${c.id}')">Editar coordinadora</button>`:''}</div></div>`}
+const filaAlerta=a=>`<div class="al"><span>${a.ico}</span><div><b>${esc(a.t)}</b><small>${esc(a.d)}</small></div><button class="btn btn-o btn-s" onclick="${a.fn}">Abrir</button></div>`;
+function vDashboard(){
+  const cs=coordsVis(),v=statsVis(visitasVis()),ps=pendVis(),ab=ps.filter(p=>p.estado!=='Completado'),al=ab.map(p=>alerta(p).k);
+  const venc=al.filter(k=>k==='venc').length,prox=al.filter(k=>k==='hoy'||k==='prox').length,F=fin(idsVis(),S.f.anio,S.f.mes),N=statsNov(novVis());
+  const crit=ordenCrit(ab).filter(p=>alerta(p).k!=='plazo'||p.prioridad==='Urgente').slice(0,6),ult=[...novVis()].sort((a,b)=>(b.fecha+b.hora).localeCompare(a.fecha+a.hora)).slice(0,5);
+  return `
+  <section class="grp"><h4>OPERACIÓN</h4><div class="kpis">${kpi('Coordinadoras',cs.length,'k')}${kpi('Clientes',clientesVis().length,'k')}${kpi('Visitas programadas',v.prog,'y')}${kpi('Visitas realizadas',v.real,'g')}${kpi('% cumplimiento visitas',v.pct+'%',v.pct>=90?'g':v.pct<60?'r':'y')}</div></section>
+  <section class="grp"><h4>PENDIENTES</h4><div class="kpis">${kpi('Total pendientes',ps.length,'k')}${kpi('Abiertos',ab.length,'y')}${kpi('Urgentes',ab.filter(p=>p.prioridad==='Urgente').length,'o')}${kpi('Próximos a vencer',prox,'o')}${kpi('Vencidos',venc,venc?'r':'')}${kpi('Completados',ps.length-ab.length,'g')}</div></section>
+  <section class="grp"><h4>FINANCIERO</h4><div class="kpis" style="grid-template-columns:repeat(auto-fill,minmax(190px,1fr))">${kpi('Facturado',fCOP(F.fact),'y')}${kpi('Provisión adicionales',fCOP(F.prov),'k')}${kpi('Total real (fact. + prov.)',fCOP(F.real),'g')}${kpi('% adicionales sobre total',F.pp+'%')}</div></section>
+  <section class="grp"><h4>INICIO DE OPERACIONES</h4><div class="kpis">${kpi('Novedades',N.total,'k')}${kpi('Abiertas',N.a,N.a?'r':'')}${kpi('En seguimiento',N.s,'o')}${kpi('Solucionadas',N.o,'g')}${kpi('% de solución',N.pct+'%','g')}</div></section>
+  <div class="cols c2">
+    <div class="card"><h3>🚨 Pendientes que requieren atención <span class="sp" style="flex:1"></span><button class="btn btn-o btn-s" onclick="ir('pendientes')">Ver todos</button></h3>
+      ${crit.length?crit.map(p=>{const a=alerta(p);return `<div class="al"><span>${a.ico}</span><div><b>${esc(p.descripcion)}</b><small>${esc(nomCli(p.clienteId))} · ${esc(nomCoord(coordDe(p.clienteId)))} · límite ${fFecha(p.fechaLimite)}</small></div><span class="badge ${a.cls}">${a.t}</span><button class="btn btn-o btn-s" onclick="formPendiente('${p.id}')">Abrir</button></div>`}).join(''):'<p class="vacio">Sin pendientes críticos 🎉</p>'}</div>
+    <div class="card"><h3>Últimas novedades de inicio de operaciones <span style="flex:1"></span><button class="btn btn-o btn-s" onclick="ir('inicio')">Ver todas</button></h3>
+      ${ult.length?ult.map(n=>`<div class="al"><div><b>${esc(n.novedad)}</b><small>${esc(nomCli(n.clienteId))} · ${fFecha(n.fecha)} ${n.hora}</small></div>${badge(n.estado)}</div>`).join(''):'<p class="vacio">Sin novedades en el periodo.</p>'}</div>
+  </div>
+  <section class="grp"><h4>COORDINADORAS</h4><div class="grid-c">${cs.map(tarjetaCoord).join('')||'<p class="vacio">No hay coordinadoras. Créalas en el módulo Coordinadoras o importa el Excel de clientes.</p>'}</div></section>
+  <div class="cols c2">
+    <div class="card"><h3>Visitas por coordinadora</h3><div class="ch"><canvas id="g1"></canvas></div></div>
+    <div class="card"><h3>Facturación real (facturado + provisión) · ${S.f.anio}</h3><div class="ch"><canvas id="g2"></canvas></div></div>
+    <div class="card"><h3>Pendientes por alerta</h3><div class="ch"><canvas id="g3"></canvas></div></div>
+    <div class="card"><h3>Novedades por estado</h3><div class="ch"><canvas id="g4"></canvas></div></div>
+  </div>`}
+function dDashboard(){
+  const cs=coordsVis(),st=cs.map(c=>statsCoord(c.id)),ids=idsVis(),fm=MESES.map((_,i)=>fin(ids,S.f.anio,i+1));
+  grafico('g1',{type:'bar',data:{labels:cs.map(c=>c.nombre.split(' ').slice(0,2).join(' ')),datasets:[{label:'Programadas',data:st.map(s=>s.prog),backgroundColor:COL.k,borderRadius:5},{label:'Realizadas',data:st.map(s=>s.real),backgroundColor:COL.y,borderRadius:5}]},options:{scales:{y:{beginAtZero:true,ticks:{precision:0}}}}});
+  grafico('g2',{type:'bar',data:{labels:MESES.map(m=>m.slice(0,3)),datasets:dsPF(fm.map(f=>f.prov),fm.map(f=>f.fact))},options:ejeCOP});
+  const ks=pendVis().map(p=>alerta(p).k),n=k=>ks.filter(x=>x===k).length;
+  dona('g3',['Vencido','Vence hoy','Vence próximamente','En plazo','Completado'],[n('venc'),n('hoy'),n('prox'),n('plazo'),n('ok')],[COL.r,COL.o,COL.y,COL.g,COL.gr]);
+  const N=statsNov(novVis());dona('g4',['Abierto','En seguimiento','Solucionado'],[N.a,N.s,N.o],[COL.r,COL.o,COL.gr])}
+function vAlertas(){const A=alertas();return `<div class="card"><h3>Alertas activas (${A.length})</h3><p class="hint" style="margin:-6px 0 10px">Se calculan automáticamente con los filtros generales seleccionados.</p>${A.map(filaAlerta).join('')||'<p class="vacio">No hay alertas activas.</p>'}</div>`}
+
+/* ---------- 8. COORDINADORAS ---------- */
+function verCoord(id){S.detalle=id;ir('coordinadoras',1)}
+function vCoordinadoras(){
+  if(S.detalle&&coord(S.detalle))return vCoordDetalle(coord(S.detalle));
+  const cs=coordsVis();
+  return `<div class="bar"><span class="sp"></span>${esLider()?`<button class="btn btn-y" onclick="formCoord()">+ Nueva coordinadora</button>`:''}</div>
+  <div class="card"><div class="tw"><table class="tb"><thead><tr><th>Coordinadora</th><th>Clientes</th><th>Visitas programadas</th><th>Realizadas</th><th style="min-width:150px">Cumplimiento</th><th>Pendientes</th><th>Vencidos</th><th></th></tr></thead><tbody>
+  ${cs.map(c=>{const s=statsCoord(c.id);return `<tr><td><div style="display:flex;gap:10px;align-items:center">${avatar(c,38)}<b>${esc(c.nombre)}</b>${demoTag(c)}</div></td><td>${s.clientes}</td><td>${s.prog}</td><td>${s.real}</td><td><b>${s.pct}%</b>${barra(s.pct)}</td><td>${s.pend}</td><td>${s.venc?`<span class="badge b-r">${s.venc}</span>`:'0'}</td><td class="num"><button class="btn btn-o btn-s" onclick="verCoord('${c.id}')">Ver detalle</button></td></tr>`}).join('')||'<tr><td colspan="8" class="vacio">Sin coordinadoras.</td></tr>'}
+  </tbody></table></div></div>`}
+function vCoordDetalle(c){
+  const s=statsCoord(c.id),cl=db.clientes.filter(x=>x.coordId===c.id),ed=esLider();
+  return `<div class="bar"><button class="btn btn-o" onclick="S.detalle='';render()">← Volver</button><span class="sp"></span>${ed?`<button class="btn btn-k" onclick="formCoord('${c.id}')">Editar coordinadora</button>`:''}</div>
+  <div class="card" style="margin-bottom:16px"><div class="cc-h" style="margin:0">${avatar(c,84)}<div><b style="font-size:19px">${esc(c.nombre)}${demoTag(c)}</b><small>${esc(c.correo||'')} ${c.telefono?'· '+esc(c.telefono):''}</small></div></div></div>
+  <div class="kpis" style="margin-bottom:16px">${kpi('Clientes',s.clientes,'k')}${kpi('Visitas programadas',s.prog,'y')}${kpi('Visitas realizadas',s.real,'g')}${kpi('Cumplimiento de visitas',s.pct+'%',s.pct>=90?'g':'y')}${kpi('Pendientes abiertos',s.pend,'o')}${kpi('Pendientes vencidos',s.venc,s.venc?'r':'')}</div>
+  <div class="card"><h3>Clientes asignados</h3><div class="tw"><table class="tb"><thead><tr><th>Cliente</th><th>Ciudad</th><th>Proyecto</th><th>Estado</th><th>Próxima visita</th><th>Última visita</th><th style="min-width:130px">% cumplimiento</th></tr></thead><tbody>
+  ${cl.map(x=>{const p=statsVis(db.visitas.filter(v=>v.clienteId===x.id&&enPeriodo(v.fecha))).pct;return `<tr><td><b>${esc(x.nombre)}</b></td><td>${esc(x.ciudad)}</td><td>${esc(x.proyecto)}</td><td>${badge(x.estado)}</td><td>${fFecha(proxVisita(x.id))}</td><td>${fFecha(ultVisita(x.id))}</td><td><b>${p}%</b>${barra(p)}</td></tr>`}).join('')||'<tr><td colspan="7" class="vacio">Sin clientes asignados.</td></tr>'}
+  </tbody></table></div></div>`}
+function formCoord(id){
+  const c=id?coord(id):{nombre:'',correo:'',telefono:'',foto:''},cl=id?db.clientes.filter(x=>x.coordId===id):[];S.fotoTmp=c.foto||'';
+  abrirModal(id?'Editar coordinadora':'Nueva coordinadora',`<form id="f-coord" onsubmit="guardarCoord(event,'${id||''}')">
+   <div class="foto-ed"><div id="foto-prev">${avatar(c.nombre?c:{nombre:'?'},92)}</div><div><label class="btn btn-o btn-s">📷 Cargar / cambiar foto<input type="file" accept="image/*" hidden onchange="cargarFoto(this)"></label> <button type="button" class="btn btn-o btn-s" onclick="S.fotoTmp='';pintarFoto()">Quitar foto</button><p class="hint">JPG o PNG. Se recorta y ajusta automáticamente.</p></div></div>
+   <div class="fg">${campo('Nombre completo',`<input name="nombre" required value="${esc(c.nombre)}">`,'full')}${campo('Correo',`<input name="correo" type="email" value="${esc(c.correo||'')}">`)}${campo('Teléfono',`<input name="telefono" value="${esc(c.telefono||'')}">`)}</div>
+   ${id?`<div class="sep" style="margin-top:14px">Clientes asignados (${cl.length})</div><p style="margin:8px 0 0">${cl.map(x=>`<span class="badge b-n" style="margin:2px">${esc(x.nombre)}</span>`).join('')||'<span class="hint">Ninguno. Se asignan desde el módulo Clientes o al importar el Excel.</span>'}</p>`:''}
+   ${traza(c)}<div class="acc">${id&&esLider()?`<button type="button" class="btn btn-d" onclick="borrarCoord('${id}')">Eliminar</button>`:''}<span style="flex:1"></span><button type="button" class="btn btn-o" onclick="cerrarModal()">Cancelar</button><button class="btn btn-y">Guardar</button></div></form>`)}
+function pintarFoto(){$('#foto-prev').innerHTML=avatar({nombre:$('#f-coord [name=nombre]').value||'?',foto:S.fotoTmp},92)}
+/* La foto se reduce a 240×240 px para no saturar el almacenamiento */
+function cargarFoto(inp){const f=inp.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{const im=new Image();im.onload=()=>{const cv=document.createElement('canvas'),T=240,m=Math.min(im.width,im.height);cv.width=cv.height=T;cv.getContext('2d').drawImage(im,(im.width-m)/2,(im.height-m)/2,m,m,0,0,T,T);S.fotoTmp=cv.toDataURL('image/jpeg',.85);pintarFoto()};im.src=rd.result};rd.readAsDataURL(f)}
+function guardarCoord(e,id){e.preventDefault();const d=Object.fromEntries(new FormData(e.target));d.nombre=d.nombre.trim();d.foto=S.fotoTmp;
+  if(id)actualizar(coord(id),d,'Coordinadoras',`Coordinadora ${d.nombre}`);else crear('coordinadoras',d,'Coordinadoras',`Coordinadora ${d.nombre}`);
+  guardar();cerrarModal();toast('Coordinadora guardada');render()}
+function borrarCoord(id){const n=db.clientes.filter(c=>c.coordId===id).length;if(n)return toast(`No se puede eliminar: tiene ${n} clientes asignados. Reasígnalos primero.`,'err');
+  if(!confirm('¿Eliminar esta coordinadora?'))return;eliminar('coordinadoras',id,'Coordinadoras',`Coordinadora ${nomCoord(id)}`);S.detalle='';guardar();cerrarModal();render()}
+
+/* ---------- 9. CLIENTES + IMPORTACIÓN DE EXCEL ---------- */
+function vClientes(){const im=db.config.importacion;
+  return `<div class="card" style="margin-bottom:16px"><h3>Base de clientes</h3>
+   ${esLider()?`<label class="drop" ondragover="event.preventDefault();this.classList.add('on')" ondragleave="this.classList.remove('on')" ondrop="event.preventDefault();this.classList.remove('on');leerExcel({files:event.dataTransfer.files})"><b>⬆ Cargar archivo Excel de clientes</b><span>Haz clic aquí o arrastra el archivo .xlsx / .xls · verás una vista previa antes de confirmar</span><input type="file" accept=".xlsx,.xls" hidden onchange="leerExcel(this)"></label>`:'<p class="hint">Solo el perfil Líder puede importar el Excel. Cambia el perfil en el selector "Ver como" de la barra superior.</p>'}
+   <div class="bar" style="margin:0">${esLider()?`<button class="btn btn-o" onclick="plantilla()">Descargar plantilla</button><button class="btn btn-o" onclick="formCliente()">+ Nuevo cliente</button>`:''}<button class="btn btn-o" onclick="exportar('Clientes',{Clientes:filasClientes()})">⬇ Exportar Excel</button>
+   <span class="sp"></span><span class="hint" style="margin:0">${im?`Última actualización: <b>${fFechaHora(im.fecha)}</b> · ${esc(im.archivo)} · ${im.total} registros (${im.nuevos} nuevos, ${im.actualizados} actualizados)`:'Aún no se ha importado ningún Excel.'}</span></div></div>
+  <div class="card"><div class="bar"><input placeholder="🔍 Buscar cliente, código, ciudad, proyecto…" value="${esc(S.cf.q)}" oninput="S.cf.q=this.value;$('#cli-t').innerHTML=tablaCli()" style="flex:1 1 260px"><select onchange="S.cf.estado=this.value;$('#cli-t').innerHTML=tablaCli()"><option value="">Todos los estados</option>${opts(['Activo','Inactivo'],S.cf.estado)}</select></div>
+  <div class="tw" id="cli-t">${tablaCli()}</div></div>`}
+function tablaCli(){const q=norm(S.cf.q),l=clientesVis().filter(c=>(!S.cf.estado||c.estado===S.cf.estado)&&(!q||norm([c.codigo,c.nombre,c.jefe,c.ciudad,c.proyecto,nomCoord(c.coordId)].join(' ')).includes(q))).sort((a,b)=>a.nombre.localeCompare(b.nombre));
+  return `<table class="tb"><thead><tr><th>Código</th><th>Cliente</th><th>Coordinadora</th><th>Jefe</th><th class="num">Valor a facturar</th><th>Proyecto</th><th>Ciudad</th><th>Dirección</th><th>Estado</th><th>Inicio</th><th>Final</th><th></th></tr></thead><tbody>
+  ${l.map(c=>`<tr><td>${esc(c.codigo)}</td><td><b>${esc(c.nombre)}</b></td><td>${esc(nomCoord(c.coordId))}</td><td>${esc(c.jefe||'')}</td><td class="num">${Number(c.valorMensual)?fCOP(c.valorMensual):'—'}</td><td>${esc(c.proyecto)}</td><td>${esc(c.ciudad)}</td><td>${esc(c.direccion)}</td><td>${badge(c.estado||'Activo')}</td><td>${fFecha(c.fechaInicio)}</td><td>${fFecha(c.fechaFin)}</td><td class="num">${esLider()?`<button class="btn btn-o btn-s" onclick="formCliente('${c.id}')">Editar</button>`:''}</td></tr>`).join('')||'<tr><td colspan="12" class="vacio">Sin clientes para mostrar.</td></tr>'}
+  </tbody></table><p class="hint">${l.length} clientes</p>`}
+function formCliente(id){const c=id?cliente(id):{estado:'Activo'};
+  abrirModal(id?'Editar cliente':'Nuevo cliente',`<form onsubmit="guardarCliente(event,'${id||''}')"><div class="fg">
+   ${campo('Código cliente',`<input name="codigo" value="${esc(c.codigo||'')}">`)}${campo('Cliente',`<input name="nombre" required value="${esc(c.nombre||'')}">`)}
+   ${campo('Coordinadora',`<select name="coordId">${optsCoord(c.coordId,'Sin asignar')}</select>`)}${campo('Jefe',`<input name="jefe" value="${esc(c.jefe||'')}">`)}${campo('Valor a facturar mensual ($)',`<input name="valorMensual" inputmode="numeric" value="${Number(c.valorMensual)?fNum(c.valorMensual):''}" oninput="this.value=parseMoney(this.value)?fNum(parseMoney(this.value)):''">`)}${campo('Proyecto',`<input name="proyecto" value="${esc(c.proyecto||'')}">`)}
+   ${campo('Ciudad',`<input name="ciudad" value="${esc(c.ciudad||'')}">`)}${campo('Dirección',`<input name="direccion" value="${esc(c.direccion||'')}">`)}
+   ${campo('Estado',`<select name="estado">${opts(['Activo','Inactivo'],c.estado)}</select>`)}<span></span>
+   ${campo('Fecha inicio',`<input type="date" name="fechaInicio" value="${c.fechaInicio||''}">`)}${campo('Fecha final',`<input type="date" name="fechaFin" value="${c.fechaFin||''}">`)}
+   ${campo('Observaciones',`<textarea name="observaciones">${esc(c.observaciones||'')}</textarea>`,'full')}</div>
+   ${traza(c)}<div class="acc">${id?`<button type="button" class="btn btn-d" onclick="borrarCliente('${id}')">Eliminar</button>`:''}<span style="flex:1"></span><button type="button" class="btn btn-o" onclick="cerrarModal()">Cancelar</button><button class="btn btn-y">Guardar</button></div></form>`)}
+function guardarCliente(e,id){e.preventDefault();const d=Object.fromEntries(new FormData(e.target));d.valorMensual=parseMoney(d.valorMensual);
+  if(id)actualizar(cliente(id),d,'Clientes',`Cliente ${d.nombre}`);else crear('clientes',d,'Clientes',`Cliente ${d.nombre}`);guardar();cerrarModal();toast('Cliente guardado');render()}
+function borrarCliente(id){const n=['visitas','pendientes','provisiones','facturas','novedades'].reduce((t,k)=>t+db[k].filter(r=>r.clienteId===id).length,0);
+  if(n)return toast(`Este cliente tiene ${n} registros asociados. Para conservar el historial, cámbialo a estado Inactivo.`,'err');
+  if(!confirm('¿Eliminar este cliente?'))return;eliminar('clientes',id,'Clientes',`Cliente ${nomCli(id)}`);guardar();cerrarModal();render()}
+/* --- Importación: detección flexible de columnas (sin tildes ni mayúsculas) --- */
+const CAMPOS=[
+  {k:'codigo',t:'Código cliente',s:['codigo cliente','codigo','cod cliente','codigo del cliente','id cliente','nit','cod','id','ceco','codigo ceco','centro de costo','centro de costos']},
+  {k:'nombre',t:'Cliente',req:1,s:['cliente','nombre cliente','nombre del cliente','razon social','empresa','nombre','clientes','nombre empresa','cuenta']},
+  {k:'coordinadora',t:'Coordinadora',req:1,s:['coordinadora','coordinador','coordinadora asignada','coordinador asignado','coordinadora responsable','coordinadoras','coordinador a','coord','coordinadora de proyecto','coordinador de proyecto']},
+  {k:'valorMensual',t:'Valor a facturar',s:['valor a facturar','valor facturar','valor mensual','facturacion mensual','valor facturacion','valor factura','valor del contrato','valor contrato','tarifa mensual','tarifa','facturacion','valor']},
+  {k:'jefe',t:'Jefe',s:['jefe','jefe inmediato','jefe de operaciones','jefe operaciones','jefe de proyecto','jefe zona','lider','gerente','director','supervisor']}];
+function mapear(headers){const H=headers.map(norm),us=new Set(),map={};
+  for(const c of CAMPOS){const i=H.findIndex((h,j)=>!us.has(j)&&h&&c.s.includes(h));if(i>=0){map[c.k]=i;us.add(i)}}
+  /* segunda pasada por coincidencia parcial; "Cliente" va al final para no capturar columnas ajenas */
+  for(const k of ['coordinadora','jefe','valorMensual','codigo','nombre']){if(map[k]!==undefined)continue;const c=CAMPOS.find(x=>x.k===k);
+    const i=H.findIndex((h,j)=>!us.has(j)&&h&&c.s.some(x=>x.length>=4&&h.includes(x)));if(i>=0){map[k]=i;us.add(i)}}
+  return map}
+/* Valor en pesos desde Excel: número, "$ 12.345.678", "12,345,678.00" o "12.345.678,50" */
+function aDinero(v){if(typeof v==='number')return Math.round(v);let t=String(v??'').replace(/[^\d.,-]/g,'');if(!t)return 0;
+  const m=t.match(/[.,](\d{1,2})$/);if(m)t=t.slice(0,-m[0].length);return Number(t.replace(/[.,]/g,''))||0}
+function aFecha(v){if(v===''||v==null)return'';
+  if(typeof v==='number'&&window.XLSX){const d=XLSX.SSF.parse_date_code(v);return d&&d.y>1950?`${d.y}-${pad(d.m)}-${pad(d.d)}`:''}
+  if(v instanceof Date)return iso(v);const s=String(v).trim();let m;
+  if(m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/))return `${m[1]}-${pad(m[2])}-${pad(m[3])}`;
+  if(m=s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/))return `${m[3].length===2?'20'+m[3]:m[3]}-${pad(m[2])}-${pad(m[1])}`;return''}
+function leerExcel(inp){const f=inp.files[0];try{inp.value=''}catch(e){}if(!f)return;if(!/\.xlsx?$/i.test(f.name))return toast('El archivo debe ser .xlsx o .xls','err');if(!window.XLSX)return toast('No se pudo cargar la librería de Excel (requiere internet)','err');
+  const rd=new FileReader();rd.onload=e=>{try{const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});S.imp={wb,archivo:f.name,hoja:wb.SheetNames[0]};prepararHoja();previaImp()}catch(err){toast('No se pudo leer el archivo: '+err.message,'err')}};rd.readAsArrayBuffer(f)}
+/* Busca la fila de encabezados entre las primeras 20 filas (por si el archivo trae títulos encima) */
+function prepararHoja(){const I=S.imp,m=XLSX.utils.sheet_to_json(I.wb.Sheets[I.hoja],{header:1,defval:'',raw:true});let enc=0,pt=-1;
+  for(let i=0;i<Math.min(m.length,20);i++){const n=Object.keys(mapear(m[i]||[])).length;if(n>pt){pt=n;enc=i}}
+  I.m=m;I.enc=enc;I.headers=(m[enc]||[]).map(String);I.map=mapear(I.headers)}
+function setEnc(n){const I=S.imp;I.enc=Math.max(0,Math.min(I.m.length-1,(Number(n)||1)-1));I.headers=(I.m[I.enc]||[]).map(String);I.map=mapear(I.headers);previaImp()}
+function analizarImp(){const{m,enc,map}=S.imp,filas=[];let omit=0;const nc=new Map();
+  const porCod=new Map(db.clientes.filter(c=>c.codigo).map(c=>[norm(c.codigo),c])),porNom=new Map(db.clientes.map(c=>[norm(c.nombre),c]));
+  for(let i=enc+1;i<m.length;i++){const r=m[i]||[],g=k=>map[k]===undefined?'':(r[map[k]]??''),nombre=String(g('nombre')).trim();
+    if(!nombre){if(r.some(x=>String(x).trim()))omit++;continue}
+    const o={};CAMPOS.forEach(c=>{if(map[c.k]!==undefined)o[c.k]=c.k.startsWith('fecha')?aFecha(g(c.k)):c.k==='valorMensual'?aDinero(g(c.k)):String(g(c.k)).trim()});
+    o._ex=(o.codigo&&porCod.get(norm(o.codigo)))||porNom.get(norm(nombre))||null;
+    if(o.coordinadora&&!db.coordinadoras.some(c=>norm(c.nombre)===norm(o.coordinadora)))nc.has(norm(o.coordinadora))||nc.set(norm(o.coordinadora),o.coordinadora);filas.push(o)}
+  return{filas,omit,nuevos:filas.filter(f=>!f._ex).length,act:filas.filter(f=>f._ex).length,nuevasCoord:[...nc.values()]}}
+function previaImp(){const I=S.imp,A=analizarImp(),falta=CAMPOS.filter(c=>c.req&&I.map[c.k]===undefined),cols=CAMPOS.filter(c=>I.map[c.k]!==undefined);
+  const selCol=c=>`<select onchange="S.imp.map.${c.k}=this.value===''?undefined:Number(this.value);if(this.value==='')delete S.imp.map.${c.k};previaImp()"><option value="">— No importar —</option>${opts(I.headers.map((h,i)=>[i,h||`(columna ${i+1})`]),I.map[c.k])}</select>`;
+  abrirModal('Importar Excel · Vista previa',`
+   <div class="bar"><b>${esc(I.archivo)}</b>${I.wb.SheetNames.length>1?`<select onchange="S.imp.hoja=this.value;prepararHoja();previaImp()">${opts(I.wb.SheetNames,I.hoja)}</select>`:`<span class="badge b-n">Hoja: ${esc(I.hoja)}</span>`}<label class="hint" style="margin:0">Los títulos de columna están en la fila <input type="number" min="1" value="${I.enc+1}" onchange="setEnc(this.value)" style="width:70px"></label></div>
+   <div class="kpis" style="margin-bottom:14px">${kpi('Registros leídos',A.filas.length,'k')}${kpi('Nuevos',A.nuevos,'g')}${kpi('Se actualizan',A.act,'y')}${kpi('Coordinadoras nuevas',A.nuevasCoord.length,'o')}${kpi('Filas omitidas (sin cliente)',A.omit)}</div>
+   <div class="sep" style="border:0;padding:0;margin-bottom:8px">Validación de columnas</div>
+   ${falta.length?`<div class="banner" style="background:#fdecea;border-color:var(--r)">⚠ Faltan columnas obligatorias: ${falta.map(c=>c.t).join(', ')}. Elige en cada lista la columna de tu Excel que corresponde (o corrige la fila de títulos arriba).</div>`:'<div class="banner" style="background:#e3f6ec;border-color:var(--gr)">✔ Columnas obligatorias identificadas. Puedes corregir cualquier asignación.</div>'}
+   <div class="fg" style="grid-template-columns:repeat(auto-fill,minmax(180px,1fr));margin-bottom:14px">${CAMPOS.map(c=>campo(c.t+(c.req?' *':''),selCol(c))).join('')}</div>
+   ${A.nuevasCoord.length?`<p class="hint">Se crearán estas coordinadoras: <b>${A.nuevasCoord.map(esc).join(', ')}</b></p>`:''}
+   <div class="tw" style="max-height:280px;overflow:auto"><table class="tb"><thead><tr><th></th>${cols.map(c=>`<th>${c.t}</th>`).join('')}</tr></thead><tbody>
+   ${A.filas.slice(0,50).map(f=>`<tr><td>${f._ex?'<span class="badge b-y">Actualiza</span>':'<span class="badge b-g">Nuevo</span>'}</td>${cols.map(c=>`<td>${esc(c.k.startsWith('fecha')?fFecha(f[c.k]):c.k==='valorMensual'?fCOP(f[c.k]):f[c.k])}</td>`).join('')}</tr>`).join('')||`<tr><td colspan="${cols.length+1}" class="vacio">No se encontraron registros.</td></tr>`}</tbody></table></div>
+   <p class="hint">Vista previa de las primeras ${Math.min(50,A.filas.length)} de ${A.filas.length} filas. Los clientes existentes se identifican por código (o por nombre si no hay código) y los que no vengan en el archivo no se eliminan.</p>
+   <div class="acc"><button class="btn btn-o" onclick="S.imp=null;cerrarModal()">Cancelar</button><button class="btn btn-y" ${falta.length||!A.filas.length?'disabled style="opacity:.4"':''} onclick="confirmarImp()">Confirmar actualización</button></div>`,true)}
+function confirmarImp(){const A=analizarImp();
+  A.filas.forEach(f=>{const d={...f};delete d._ex;
+    if('coordinadora' in d){let c=d.coordinadora&&db.coordinadoras.find(x=>norm(x.nombre)===norm(d.coordinadora));if(d.coordinadora&&!c)c=crear('coordinadoras',{nombre:d.coordinadora,correo:'',telefono:'',foto:''},'Importación',`Coordinadora ${d.coordinadora}`);d.coordId=c?c.id:'';delete d.coordinadora}
+    if('estado' in d)d.estado=/inactiv|retirad|finaliz|terminad|cerrad|suspend/i.test(d.estado)?'Inactivo':'Activo';
+    if(f._ex){Object.assign(f._ex,d);f._ex.actualizadoEn=ahora();f._ex.actualizadoPor=usuario()}
+    else db.clientes.push({id:uid(),codigo:'',jefe:'',proyecto:'',ciudad:'',direccion:'',estado:'Activo',fechaInicio:'',fechaFin:'',observaciones:'',coordId:'',...d,creadoEn:ahora(),actualizadoEn:ahora(),creadoPor:usuario(),actualizadoPor:usuario(),historial:[]})});
+  db.config.importacion={fecha:ahora(),archivo:S.imp.archivo,total:A.filas.length,nuevos:A.nuevos,actualizados:A.act};
+  auditar('Clientes','Importación Excel',`${S.imp.archivo}: ${A.filas.length} registros (${A.nuevos} nuevos, ${A.act} actualizados)`);
+  S.imp=null;guardar();cerrarModal();toast(`Base actualizada: ${A.nuevos} nuevos, ${A.act} actualizados`);render()}
+function plantilla(){exportar('Plantilla_clientes',{Clientes:[{'Código cliente':'C-001','Cliente':'Nombre del cliente','Coordinadora':'Nombre de la coordinadora','Jefe':'Nombre del jefe','Valor a facturar':25000000}]},true)}
+
+/* ---------- 10. CALENDARIO DE VISITAS Y PENDIENTES ---------- */
+function calIr(f,modo){S.cal.fecha=f;if(modo)S.cal.modo=modo;render()}
+function calMover(n){const d=toDate(S.cal.fecha);if(S.cal.modo==='mes'){d.setDate(1);d.setMonth(d.getMonth()+n)}else d.setDate(d.getDate()+(S.cal.modo==='semana'?7*n:n));S.cal.fecha=iso(d);render()}
+function vCalendario(){
+  const c=S.cal,ids=idsVis(),map={},d=toDate(c.fecha),h=hoy(),DS=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+  db.visitas.filter(v=>ids.has(v.clienteId)).forEach(v=>(map[v.fecha]=map[v.fecha]||[]).push(v));
+  Object.values(map).forEach(a=>a.sort((x,y)=>(x.hora||'').localeCompare(y.hora||'')));
+  const chip=v=>`<div class="chip ${ECLS[v.estado]}" title="${esc(nomCli(v.clienteId))} · ${v.estado}" onclick="event.stopPropagation();formVisita('${v.id}')"><b>${v.hora||''}</b> ${esc(nomCli(v.clienteId))}</div>`;
+  const vcard=v=>`<div class="vc ${ECLS[v.estado]}" onclick="event.stopPropagation();formVisita('${v.id}')"><b>${v.hora||'--:--'} · ${esc(nomCli(v.clienteId))}</b><small>${esc(v.tipo||'')} · ${esc(nomCoord(coordDe(v.clienteId)))}</small>${badge(v.estado)}</div>`;
+  let tit,body;
+  if(c.modo==='mes'){tit=`${MESES[d.getMonth()]} ${d.getFullYear()}`;const ini=new Date(d.getFullYear(),d.getMonth(),1);ini.setDate(1-((ini.getDay()+6)%7));let cel='';
+    for(let i=0;i<42;i++){const x=new Date(ini.getFullYear(),ini.getMonth(),ini.getDate()+i),k=iso(x),vs=map[k]||[];if(i===35&&x.getMonth()!==d.getMonth())break;
+      cel+=`<div class="cd ${x.getMonth()!==d.getMonth()?'out':''} ${k===h?'hoy':''}" onclick="formVisita(null,'${k}')"><span class="cd-n">${x.getDate()}</span>${vs.slice(0,3).map(chip).join('')}${vs.length>3?`<a class="mas" onclick="event.stopPropagation();calIr('${k}','dia')">+${vs.length-3} más</a>`:''}</div>`}
+    body=`<div class="cal-h">${DS.map(x=>`<div>${x}</div>`).join('')}</div><div class="cal-g">${cel}</div>`}
+  else if(c.modo==='semana'){const l=new Date(d.getFullYear(),d.getMonth(),d.getDate()-((d.getDay()+6)%7)),fin=new Date(l.getFullYear(),l.getMonth(),l.getDate()+6);tit=`Semana del ${fFecha(iso(l))} al ${fFecha(iso(fin))}`;
+    body='<div class="cal-s">'+DS.map((n,i)=>{const k=iso(new Date(l.getFullYear(),l.getMonth(),l.getDate()+i));return `<div class="${k===h?'hoy':''}" onclick="formVisita(null,'${k}')"><h5>${n} ${k.slice(8)}</h5>${(map[k]||[]).map(vcard).join('')||'<small class="hint">Sin visitas</small>'}</div>`}).join('')+'</div>'}
+  else{tit=`${DS[(d.getDay()+6)%7]} ${fFecha(c.fecha)}`;body=(map[c.fecha]||[]).map(vcard).join('')||'<p class="vacio">No hay visitas este día. Usa "Nueva visita" para registrar una.</p>'}
+  return `<div class="card"><div class="bar"><button class="btn btn-o" onclick="calMover(-1)">‹</button><button class="btn btn-o" onclick="calIr(hoy())">Hoy</button><button class="btn btn-o" onclick="calMover(1)">›</button><b style="font-size:16px">${tit}</b><span class="sp"></span>
+   <div class="seg">${[['mes','Mes'],['semana','Semana'],['dia','Día']].map(([k,t])=>`<button class="${c.modo===k?'on':''}" onclick="S.cal.modo='${k}';render()">${t}</button>`).join('')}</div>
+   <button class="btn btn-y" onclick="formVisita(null,'${c.fecha}')">+ Nueva visita</button><button class="btn btn-o" onclick="exportar('Visitas',{Visitas:filasVisitas()})">⬇ Exportar</button></div>
+   ${body}<div class="ley"><span style="--c:var(--y)">Programada</span><span style="--c:var(--gr)">Realizada</span><span style="--c:var(--o)">Reprogramada</span><span style="--c:var(--g3)">Cancelada</span><span class="hint" style="margin:0">Clic en un día para programar · clic en una visita para abrirla</span></div></div>`}
+function formVisita(id,fecha){
+  const v=id?db.visitas.find(x=>x.id===id):{fecha:fecha||hoy(),hora:'09:00',estado:'Programada',tipo:'Seguimiento',clienteId:S.f.cliente||''};if(!v)return;
+  const gen=id?db.pendientes.filter(p=>p.visitaId===id):[];
+  abrirModal(id?'Visita':'Nueva visita',`<form id="f-visita" onsubmit="guardarVisita(event,'${id||''}')"><div class="fg">
+   ${campo('Cliente',`<select name="clienteId" required onchange="$('#v-coord').value=nomCoord(coordDe(this.value))">${optsCli(clientesRol(),v.clienteId,'Seleccione…')}</select>`)}
+   ${campo('Coordinadora',`<input id="v-coord" readonly value="${esc(v.clienteId?nomCoord(coordDe(v.clienteId)):'')}">`)}
+   ${campo('Fecha',`<input type="date" name="fecha" required value="${v.fecha}">`)}${campo('Hora',`<input type="time" name="hora" value="${v.hora||''}">`)}
+   ${campo('Tipo de visita',`<select name="tipo">${opts(['Seguimiento','Auditoría','Comercial','Capacitación','Inicio de operación','Otro'],v.tipo)}</select>`)}
+   ${campo('Estado',`<select name="estado">${opts(['Programada','Realizada','Reprogramada','Cancelada'],v.estado)}</select>`)}
+   ${campo('Objetivo',`<input name="objetivo" value="${esc(v.objetivo||'')}">`,'full')}
+   ${campo('Comentarios',`<textarea name="comentarios">${esc(v.comentarios||'')}</textarea>`,'full')}
+   <div class="sep">Cierre de la visita</div>
+   ${campo('Fecha real de visita',`<input type="date" name="fechaReal" value="${v.fechaReal||''}">`)}<span></span>
+   ${campo('Hallazgos',`<textarea name="hallazgos">${esc(v.hallazgos||'')}</textarea>`,'full')}
+   <div class="full pend-box">
+     ${campo('Pendientes <small class="hint">(escribe uno por línea)</small>',`<textarea name="compromisos" rows="4" placeholder="Ej.: Enviar cotización de personal adicional&#10;Reponer dotación del puesto 2">${esc(v.compromisos||'')}</textarea>`)}
+     <div class="fg" style="margin-top:10px">${campo('Fecha límite de los pendientes',`<input type="date" name="pFecha" value="${v.pFecha||addDias(v.fecha,3)}">`)}${campo('Prioridad',`<select name="pPrioridad">${opts(['Normal','Alta','Urgente'],v.pPrioridad||'Normal')}</select>`)}</div>
+     <label class="chk"><input type="checkbox" name="pLider" ${v.pLider?'checked':''}> <span>📤 <b>Enviar pendiente al líder</b><small>Márcalo si el líder debe gestionarlo o conocerlo. Puedes desmarcarlo después.</small></span></label>
+     <p class="hint" style="margin-top:8px">Al presionar <b>Guardar</b>, cada línea se crea automáticamente en el módulo Pendientes, a nombre de la coordinadora que registra la visita.</p>
+     ${gen.length?`<div class="gen"><b>Pendientes ya enviados desde esta visita (${gen.length})</b>${gen.map(p=>{const a=alerta(p);return `<a onclick="formPendiente('${p.id}')"><span class="badge ${a.cls}">${a.ico}</span> ${esc(p.descripcion)} ${badge(p.estado)}${p.paraLider?' <span class="badge b-k">📤 Líder</span>':''}</a>`}).join('')}</div>`:''}
+   </div>
+   ${campo('Observaciones',`<textarea name="observaciones">${esc(v.observaciones||'')}</textarea>`,'full')}</div>
+   ${histEstados(v)}${traza(v)}
+   <div class="acc">${id&&esLider()?`<button type="button" class="btn btn-d" onclick="borrarVisita('${id}')">Eliminar</button>`:''}<span style="flex:1"></span><button type="button" class="btn btn-o" onclick="cerrarModal()">Cancelar</button><button class="btn btn-y">Guardar</button></div></form>`)}
+const histEstados=r=>r.historial&&r.historial.length?`<p class="traza">Historial de estados: ${r.historial.map(h=>`${esc(h.de)} → ${esc(h.a)} (${fFechaHora(h.fecha)}, ${esc(h.usuario)})`).join(' · ')}</p>`:'';
+/* Coordinadora que registra: en perfil coordinadora es ella; si registra el líder, la coordinadora del cliente */
+const coordRegistra=cid=>SESION.rol==='coord'?SESION.coordId:coordDe(cid);
+function guardarVisita(e,id){if(e)e.preventDefault();const f=$('#f-visita');if(!f.reportValidity())return;const d=Object.fromEntries(new FormData(f));
+  d.pLider=f.pLider.checked;d.coordId=coordDe(d.clienteId);if(d.estado==='Realizada'&&!d.fechaReal)d.fechaReal=d.fecha;if(d.fechaReal&&d.estado==='Programada')d.estado='Realizada';
+  const det=`Visita ${nomCli(d.clienteId)} ${fFecha(d.fecha)}`;let v,prevL=false;
+  if(id){v=db.visitas.find(x=>x.id===id);prevL=!!v.pLider;actualizar(v,d,'Visitas',det)}else v=crear('visitas',d,'Visitas',det);
+  /* Pendientes automáticos: una línea = un pendiente; no se duplican al volver a guardar */
+  const env=v.pendEnviados||[],cr=coordRegistra(v.clienteId);
+  const nuevos=(d.compromisos||'').split(/\n/).map(x=>x.trim()).filter(x=>x&&!env.includes(norm(x)));
+  nuevos.forEach(t=>crear('pendientes',{clienteId:v.clienteId,coordId:cr,descripcion:t,responsable:nomCoord(cr),fechaLimite:d.pFecha||addDias(d.fecha,3),prioridad:d.pPrioridad||'Normal',estado:'Pendiente',visitaId:v.id,paraLider:d.pLider,
+    comentarios:[{usuario:usuario(),fecha:ahora(),texto:`Generado automáticamente desde la visita del ${fFecha(d.fecha)}.`}]},'Pendientes',`Pendiente desde visita: ${t}`));
+  v.pendEnviados=env.concat(nuevos.map(norm));
+  if(id&&prevL!==d.pLider)db.pendientes.filter(p=>p.visitaId===v.id).forEach(p=>p.paraLider=d.pLider);
+  guardar();cerrarModal();render();toast(nuevos.length?`Visita guardada · ${nuevos.length} pendiente(s) enviado(s)${d.pLider?' al líder':''}`:'Visita guardada')}
+function borrarVisita(id){if(!confirm('¿Eliminar esta visita?'))return;const v=db.visitas.find(x=>x.id===id);eliminar('visitas',id,'Visitas',`Visita ${nomCli(v.clienteId)} ${fFecha(v.fecha)}`);guardar();cerrarModal();render()}
+/* --- Pendientes: tablero por coordinadora + bandeja del líder --- */
+const grpCoord=p=>p.coordId||coordDe(p.clienteId);
+function vPendientes(){const f=S.pf,set=k=>`onchange="filtroPend('${k}',this.value)"`;
+  return `<div class="card"><div class="bar">
+   <div class="seg">${[['tablero','▦ Tablero'],['lista','☰ Lista']].map(([k,t])=>`<button class="${S.pmodo===k?'on':''}" onclick="S.pmodo='${k}';render()">${t}</button>`).join('')}</div>
+   <input placeholder="🔍 Buscar…" value="${esc(f.q)}" oninput="filtroPend('q',this.value)">
+   ${esLider()?`<select ${set('coord')}>${optsCoord(f.coord,'Todas las coordinadoras')}</select>`:''}
+   <select ${set('cliente')}>${optsCli(clientesVis(),f.cliente,'Todos los clientes')}</select>
+   <select ${set('prioridad')}><option value="">Toda prioridad</option>${opts(['Normal','Alta','Urgente'],f.prioridad)}</select>
+   <select ${set('estado')}><option value="">Todo estado</option>${opts(['Pendiente','En proceso','Completado'],f.estado)}</select>
+   <select ${set('alerta')}><option value="">Todas las alertas</option>${opts([['venc','🔴 Vencidos'],['hoy','🟠 Vencen hoy'],['prox3','🟡 Próximos a vencer (3 días)']],f.alerta)}</select>
+   <label class="hint" style="margin:0">Límite desde <input type="date" value="${f.desde}" ${set('desde')} style="width:140px"></label><label class="hint" style="margin:0">hasta <input type="date" value="${f.hasta}" ${set('hasta')} style="width:140px"></label>
+   <span class="sp"></span><button class="btn btn-y" onclick="formPendiente()">+ Nuevo pendiente</button><button class="btn btn-o" onclick="exportar('Pendientes',{Pendientes:filasPendientes()})">⬇ Exportar</button></div>
+   <div class="tw" id="pend-t">${contPend()}</div></div>`}
+const contPend=()=>S.pmodo==='lista'?tablaPend():tableroPend();
+function filtroPend(k,v){S.pf[k]=v;$('#pend-t').innerHTML=contPend()}
+function pendFiltrados(){const f=S.pf,q=norm(f.q);return ordenCrit(pendVis().filter(p=>{const a=alerta(p).k;
+  return(!f.coord||grpCoord(p)===f.coord)&&(!f.cliente||p.clienteId===f.cliente)&&(!f.prioridad||p.prioridad===f.prioridad)&&(!f.estado||p.estado===f.estado)
+   &&(!f.desde||p.fechaLimite>=f.desde)&&(!f.hasta||p.fechaLimite<=f.hasta)&&(!f.alerta||(f.alerta==='prox3'?(a==='hoy'||a==='prox'):a===f.alerta))
+   &&(!q||norm([p.descripcion,p.responsable,nomCli(p.clienteId)].join(' ')).includes(q))}))}
+function miniPend(p,conCoord){const a=alerta(p),uc=(p.comentarios||[]).slice(-1)[0],d=diasEntre(hoy(),p.fechaLimite);
+  return `<div class="pm ${a.k}" onclick="formPendiente('${p.id}')"><div class="row"><span class="badge ${a.cls}">${a.ico} ${a.t}</span>${badge(p.prioridad)}</div>
+   <b>${esc(p.descripcion)}</b><small>${esc(nomCli(p.clienteId))}${conCoord?` · <b>${esc(nomCoord(grpCoord(p)))}</b>`:''}</small>
+   <small>Límite ${fFecha(p.fechaLimite)}${p.estado!=='Completado'?` · ${d<0?`${-d} días vencido`:d===0?'hoy':`faltan ${d} días`}`:''} · ${esc(p.estado)}${p.paraLider&&!conCoord?' · <span class="badge b-k">📤 Líder</span>':''}</small>
+   ${uc?`<small class="uc">💬 <b>${esc(uc.usuario)}:</b> ${esc(uc.texto)}</small>`:''}</div>`}
+function tableroPend(){
+  const l=pendFiltrados().filter(p=>S.pComp||S.pf.estado==='Completado'||p.estado!=='Completado'),cf=coordFiltro(),L=esLider();
+  const cs=db.coordinadoras.filter(c=>(!cf||c.id===cf)&&(!S.pf.coord||c.id===S.pf.coord));
+  const panel=(cab,arr,cls,conCoord)=>`<div class="pp ${cls||''}"><div class="pp-h">${cab}<span class="pp-c">${arr.length}</span></div><div class="pp-b">${arr.map(p=>miniPend(p,conCoord)).join('')||'<p class="vacio" style="padding:16px 6px">Sin pendientes 🎉</p>'}</div></div>`;
+  const cab=c=>{const ab=l.filter(p=>grpCoord(p)===c.id&&p.estado!=='Completado'),v=ab.filter(p=>alerta(p).k==='venc').length;return `${avatar(c,36)}<div><b>${esc(c.nombre)}</b><small>${ab.length} abiertos${v?` · <span style="color:var(--r)">${v} vencidos</span>`:''}</small></div>`};
+  const sinC=l.filter(p=>!coord(grpCoord(p)));
+  return `<label class="hint" style="display:inline-flex;gap:6px;align-items:center;margin:0 0 12px;cursor:pointer"><input type="checkbox" style="width:auto" ${S.pComp?'checked':''} onchange="S.pComp=this.checked;$('#pend-t').innerHTML=contPend()"> Mostrar también los completados</label>
+  <div class="pboard">${panel(`<span class="pp-i">📤</span><div><b>${L?'Bandeja del líder':'Enviados al líder'}</b><small>${L?'Pendientes que las coordinadoras enviaron al líder':'Tus pendientes enviados al líder'}</small></div>`,l.filter(p=>p.paraLider),'lid',true)}
+   ${cs.map(c=>panel(cab(c),l.filter(p=>grpCoord(p)===c.id))).join('')}${sinC.length?panel('<div><b>Sin coordinadora asignada</b></div>',sinC):''}</div>`}
+function tablaPend(){const l=pendFiltrados();
+  return `<table class="tb"><thead><tr><th>Alerta</th><th>Cliente</th><th>Coordinadora</th><th>Pendiente</th><th>Responsable</th><th>Creación</th><th>Fecha límite</th><th>Días restantes</th><th>Prioridad</th><th>Estado</th><th>Último comentario</th><th>Acción</th></tr></thead><tbody>
+  ${l.map(p=>{const a=alerta(p),d=diasEntre(hoy(),p.fechaLimite),uc=(p.comentarios||[]).slice(-1)[0];return `<tr class="${a.k==='venc'?'venc':''}"><td><span class="badge ${a.cls}">${a.ico} ${a.t}</span></td><td><b>${esc(nomCli(p.clienteId))}</b></td><td>${esc(nomCoord(grpCoord(p)))}</td><td>${esc(p.descripcion)}${p.paraLider?' <span class="badge b-k">📤 Líder</span>':''}</td><td>${esc(p.responsable)}</td><td>${fFecha(p.creadoEn.slice(0,10))}</td><td>${fFecha(p.fechaLimite)}</td><td class="num">${p.estado==='Completado'?'—':d}</td><td>${badge(p.prioridad)}</td><td>${badge(p.estado)}</td><td style="max-width:220px">${uc?`<small><b>${esc(uc.usuario)}:</b> ${esc(uc.texto)}</small>`:'—'}</td><td><button class="btn btn-o btn-s" onclick="formPendiente('${p.id}')">Abrir</button></td></tr>`}).join('')||'<tr><td colspan="12" class="vacio">Sin pendientes con estos filtros.</td></tr>'}
+  </tbody></table><p class="hint">${l.length} pendientes · ordenados por criticidad</p>`}
+function formPendiente(id,pre){
+  const p=id?db.pendientes.find(x=>x.id===id):{clienteId:S.f.cliente||'',fechaLimite:addDias(hoy(),3),prioridad:'Normal',estado:'Pendiente',comentarios:[],paraLider:SESION.rol==='coord',...pre};if(!p)return;
+  if(!id&&!p.responsable&&p.clienteId)p.responsable=nomCoord(coordRegistra(p.clienteId));
+  const a=id?alerta(p):null;
+  /* línea de tiempo: comentarios + cambios de estado, sin eliminar nada */
+  const tl=[...(p.comentarios||[]).map(c=>({f:c.fecha,h:`<li><small>${esc(c.usuario)} · ${fFechaHora(c.fecha)}</small>${esc(c.texto)}</li>`})),...(p.historial||[]).map(h=>({f:h.fecha,h:`<li class="sys"><small>${esc(h.usuario)} · ${fFechaHora(h.fecha)}</small>Estado: ${esc(h.de)} → ${esc(h.a)}</li>`}))].sort((x,y)=>x.f.localeCompare(y.f));
+  abrirModal(id?'Pendiente':'Nuevo pendiente',`<form onsubmit="guardarPendiente(event,'${id||''}','${p.visitaId||''}')">
+   ${a?`<p style="margin:0 0 12px"><span class="badge ${a.cls}">${a.ico} ${a.t}</span> ${p.visitaId?'<span class="badge b-n">Generado desde una visita</span>':''}</p>`:''}
+   <div class="fg">${campo('Cliente',`<select name="clienteId" required ${id?'disabled':''} onchange="const r=this.form.responsable;$('#p-coord').value=nomCoord(coordRegistra(this.value));if(!r.value)r.value=$('#p-coord').value">${optsCli(clientesRol(),p.clienteId,'Seleccione…')}</select>`)}
+   ${campo('Coordinadora',`<input id="p-coord" readonly value="${esc(id?nomCoord(grpCoord(p)):p.clienteId?nomCoord(coordRegistra(p.clienteId)):'')}">`)}
+   ${campo('Descripción del pendiente',`<textarea name="descripcion" required>${esc(p.descripcion||'')}</textarea>`,'full')}
+   ${campo('Responsable',`<input name="responsable" value="${esc(p.responsable||'')}">`)}${campo('Fecha límite',`<input type="date" name="fechaLimite" required value="${p.fechaLimite}">`)}
+   ${campo('Prioridad',`<select name="prioridad">${opts(['Normal','Alta','Urgente'],p.prioridad)}</select>`)}${campo('Estado',`<select name="estado">${opts(['Pendiente','En proceso','Completado'],p.estado)}</select>`)}
+   <label class="chk full"><input type="checkbox" name="paraLider" ${p.paraLider?'checked':''}> <span>📤 <b>Enviar al líder</b><small>Aparece en la Bandeja del líder del módulo Pendientes.</small></span></label>
+   ${id?`<div class="sep">Historial de comentarios</div><ul class="tl full">${tl.map(x=>x.h).join('')||'<li class="sys">Sin comentarios todavía.</li>'}</ul>`:''}
+   ${campo(id?'Agregar comentario':'Comentarios',`<textarea name="comentario" placeholder="Escribe un comentario…"></textarea>`,'full')}</div>
+   ${traza(p)}<div class="acc">${id&&esLider()?`<button type="button" class="btn btn-d" onclick="borrarPendiente('${id}')">Eliminar</button>`:''}<span style="flex:1"></span><button type="button" class="btn btn-o" onclick="cerrarModal()">Cancelar</button><button class="btn btn-y">Guardar</button></div></form>`)}
+function guardarPendiente(e,id,visitaId){e.preventDefault();const d=Object.fromEntries(new FormData(e.target)),txt=(d.comentario||'').trim();delete d.comentario;d.paraLider=e.target.paraLider.checked;
+  const com=txt?{usuario:usuario(),fecha:ahora(),texto:txt}:null;
+  if(id){const p=db.pendientes.find(x=>x.id===id);if(!!p.paraLider!==d.paraLider)(p.comentarios=p.comentarios||[]).push({usuario:usuario(),fecha:ahora(),texto:d.paraLider?'📤 Enviado al líder.':'Retirado de la bandeja del líder.'});actualizar(p,d,'Pendientes',`Pendiente: ${d.descripcion}`);if(com)p.comentarios.push(com)}
+  else{d.coordId=coordRegistra(d.clienteId);d.visitaId=visitaId||'';d.comentarios=com?[com]:[];crear('pendientes',d,'Pendientes',`Pendiente: ${d.descripcion}`)}
+  guardar();cerrarModal();toast('Pendiente guardado');render()}
+function borrarPendiente(id){if(!confirm('¿Eliminar este pendiente y su historial de comentarios?'))return;eliminar('pendientes',id,'Pendientes',`Pendiente: ${db.pendientes.find(x=>x.id===id).descripcion}`);guardar();cerrarModal();render()}
+
+/* ---------- 11. PROVISIONES Y FACTURACIÓN ---------- */
+const selAnio=()=>`<select onchange="setF('anio',this.value)" style="flex:0 1 110px">${opts(anios(),S.f.anio)}</select>`;
+function anios(){const a=new Set([HOY.getFullYear()-1,HOY.getFullYear(),HOY.getFullYear()+1,Number(S.f.anio)]);db.provisiones.forEach(p=>a.add(p.anio));db.facturas.forEach(f=>a.add(f.anio));db.visitas.forEach(v=>a.add(Number(v.fecha.slice(0,4))));return [...a].sort()}
+/* Provisiones de ADICIONALES: matriz clientes × meses, edición directa en la celda.
+   Total real del mes = facturación + provisión de adicionales */
+function vProvisiones(){
+  const an=Number(S.f.anio),L=esLider(),q=norm(S.prov.q),ids=idsVis(),mAct=an===HOY.getFullYear()?HOY.getMonth():-1;
+  const filas=clientesVis().filter(c=>!q||norm(c.nombre+' '+(c.codigo||'')).includes(q)).map(c=>({c,pr:db.provisiones.find(p=>p.clienteId===c.id&&p.anio===an)}))
+    .filter(r=>!S.prov.solo||r.pr).sort((a,b)=>(!!b.pr-!!a.pr)||a.c.nombre.localeCompare(b.c.nombre));
+  const F=fin(ids,an,''),real=S.prov.modo==='real',conP=db.provisiones.filter(p=>p.anio===an&&ids.has(p.clienteId)&&sum(p.valores)>0).length;
+  const celda=(r,i)=>{const p=r.pr?r.pr.valores[i]||0:0;
+    if(real){const f=fin(new Set([r.c.id]),an,i+1).fact;return `<td class="num ${i===mAct?'mact':''}" title="Facturado ${fCOP(f)} + Provisión ${fCOP(p)}">${f+p?fNum(f+p):'<span class="hint">—</span>'}</td>`}
+    return `<td class="${i===mAct?'mact':''}"><input class="pc" data-c="${r.c.id}" data-m="${i}" inputmode="numeric" ${L?'':'readonly'} value="${p?fNum(p):''}" placeholder="—"
+      oninput="this.value=parseMoney(this.value)?fNum(parseMoney(this.value)):''" onchange="setProv('${r.c.id}',${i},this.value)" onkeydown="navProv(event,this)"></td>`};
+  const totFila=r=>real?sum(MESES.map((_,i)=>fin(new Set([r.c.id]),an,i+1).fact))+(r.pr?sum(r.pr.valores):0):(r.pr?sum(r.pr.valores):0);
+  const totMes=i=>sum(filas.map(r=>(r.pr?r.pr.valores[i]||0:0)+(real?fin(new Set([r.c.id]),an,i+1).fact:0)));
+  return `<div class="kpis" style="margin-bottom:16px;grid-template-columns:repeat(auto-fill,minmax(190px,1fr))">${kpi(`Provisión adicionales ${an}`,`<span id="k-prov">${fCOP(F.prov)}</span>`,'k')}${kpi(`Facturado ${an}`,fCOP(F.fact),'y')}${kpi('Total real (facturado + provisión)',`<span id="k-real">${fCOP(F.real)}</span>`,'g')}${kpi('Clientes con provisión',`<span id="k-cli">${conP}</span>`)}</div>
+  <div class="card"><div class="bar">
+   <div class="seg">${[['prov','✎ Provisión de adicionales'],['real','Σ Total real']].map(([k,t])=>`<button class="${S.prov.modo===k?'on':''}" onclick="S.prov.modo='${k}';render()">${t}</button>`).join('')}</div>
+   ${selAnio()}<input placeholder="🔍 Buscar cliente…" value="${esc(S.prov.q)}" onchange="S.prov.q=this.value;render()" style="flex:1 1 200px">
+   <label class="hint" style="display:inline-flex;gap:6px;align-items:center;margin:0;cursor:pointer;white-space:nowrap"><input type="checkbox" style="width:auto" ${S.prov.solo?'checked':''} onchange="S.prov.solo=this.checked;render()"> Solo clientes con provisión</label>
+   <span class="sp"></span><button class="btn btn-o" onclick="exportar('Provisiones',{Provisiones:filasProvisiones()})">⬇ Exportar</button></div>
+  <p class="hint" style="margin:0 0 10px">${real?'Vista de consulta: cada celda = facturado del mes + provisión de adicionales. Pasa el mouse sobre una celda para ver el detalle.':L?'Escribe el valor directamente en la celda del mes; se guarda solo al salir de la celda o presionar Enter. Para borrar un valor, déjalo vacío. 🗑 elimina toda la provisión del cliente en el año.':'Solo lectura para el perfil coordinadora.'}</p>
+  <div class="tw mat"><table class="tb"><thead><tr><th class="fix">Cliente</th>${MESES.map((m,i)=>`<th class="num ${i===mAct?'mact':''}">${m.slice(0,3)}</th>`).join('')}<th class="num">Total ${an}</th>${L&&!real?'<th></th>':''}</tr></thead><tbody>
+   ${filas.map(r=>`<tr><td class="fix"><b>${esc(r.c.nombre)}</b><small>${esc(nomCoord(r.c.coordId))}</small></td>${MESES.map((_,i)=>celda(r,i)).join('')}<td class="num"><b id="pt-${r.c.id}">${fCOP(totFila(r))}</b></td>
+     ${L&&!real?`<td>${r.pr?`<button class="btn btn-d btn-s" title="Eliminar la provisión de este cliente en ${an}" onclick="borrarProv('${r.pr.id}')">🗑</button>`:''}</td>`:''}</tr>`).join('')||`<tr><td colspan="15" class="vacio">${S.prov.solo?'Ningún cliente tiene provisión este año. Desmarca "Solo clientes con provisión" para agregar.':'Sin clientes para mostrar.'}</td></tr>`}
+   </tbody><tfoot><tr><td class="fix">Total mes</td>${MESES.map((_,i)=>`<td class="num ${i===mAct?'mact':''}" id="pm-${i}">${fNum(totMes(i))}</td>`).join('')}<td class="num" id="pm-t">${fCOP(sum(MESES.map((_,i)=>totMes(i))))}</td>${L&&!real?'<td></td>':''}</tr></tfoot></table></div>
+  <p class="hint">${filas.length} clientes · mes actual resaltado en amarillo.</p></div>`}
+function setProv(cid,m,val){if(!esLider())return;const an=Number(S.f.anio),v=parseMoney(val);let pr=db.provisiones.find(p=>p.clienteId===cid&&p.anio===an);
+  const old=pr?pr.valores[m]||0:0;if(old===v)return;
+  const det=`Provisión adicionales ${nomCli(cid)} · ${MESES[m]} ${an}: ${fCOP(old)} → ${fCOP(v)}`;
+  if(!pr){const valores=Array(12).fill(0);valores[m]=v;pr=crear('provisiones',{clienteId:cid,anio:an,valores},'Provisiones',det)}
+  else{const valores=[...pr.valores];valores[m]=v;(pr.historial=pr.historial||[]).push({fecha:ahora(),usuario:usuario(),de:`${MESES[m]}: ${fCOP(old)}`,a:fCOP(v)});pr.valores=valores;pr.actualizadoEn=ahora();pr.actualizadoPor=usuario();auditar('Provisiones','Modificación',det)}
+  guardar();
+  /* actualiza totales sin redibujar la tabla (no se pierde la celda activa) */
+  const ids=idsVis(),F=fin(ids,an,'');$('#pt-'+cid).textContent=fCOP(sum(pr.valores));
+  const col=[...document.querySelectorAll(`.pc[data-m="${m}"]`)].map(i=>parseMoney(i.value));$('#pm-'+m).textContent=fNum(sum(col));
+  $('#pm-t').textContent=fCOP(sum([...document.querySelectorAll('.pc')].map(i=>parseMoney(i.value))));
+  $('#k-prov').textContent=fCOP(F.prov);$('#k-real').textContent=fCOP(F.real);$('#k-cli').textContent=db.provisiones.filter(p=>p.anio===an&&ids.has(p.clienteId)&&sum(p.valores)>0).length;
+  toast(`Guardado: ${nomCli(cid)} · ${MESES[m]} ${fCOP(v)}`)}
+/* Enter / flechas para moverse entre celdas como en Excel */
+function navProv(e,el,sel){const k=e.key,c=[...document.querySelectorAll(sel||'.pc:not(.fc)')],i=c.indexOf(el),n=12;let j=-1;
+  if(k==='Enter'||k==='ArrowDown')j=i+n;else if(k==='ArrowUp')j=i-n;else if(k==='ArrowRight'&&el.selectionStart===el.value.length)j=i+1;else if(k==='ArrowLeft'&&el.selectionStart===0)j=i-1;
+  if(j>=0&&j<c.length){e.preventDefault();el.blur();c[j].focus();c[j].select()}else if(k==='Enter'){e.preventDefault();el.blur()}}
+function borrarProv(id){const pr=db.provisiones.find(x=>x.id===id);if(!pr)return;
+  if(!confirm(`¿Eliminar la provisión de ${nomCli(pr.clienteId)} para ${pr.anio} (total ${fCOP(sum(pr.valores))})? Queda registrado en la trazabilidad.`))return;
+  eliminar('provisiones',id,'Provisiones',`Provisión eliminada: ${nomCli(pr.clienteId)} ${pr.anio} · valores ${pr.valores.map((v,i)=>v?MESES[i].slice(0,3)+' '+fCOP(v):'').filter(Boolean).join(', ')}`);guardar();toast('Provisión eliminada');render()}
+/* Facturación mensual: cada cliente tiene un VALOR A FACTURAR fijo (viene del Excel de clientes).
+   Todos los meses se factura ese valor, salvo que se registre un ajuste con su novedad. */
+const TIPOS_AJ=['Disminución de personal','Ausentismo / novedades de nómina','Días no laborados','Descuento por ANS','Cambio de tarifa','Nota crédito','Servicio adicional','Otro'];
+function vFacturacion(){
+  const an=Number(S.f.anio),L=esLider(),q=norm(S.fac.q),ids=idsVis(),mAct=an===HOY.getFullYear()?HOY.getMonth():-1;
+  const filas=clientesVis().filter(c=>!q||norm(c.nombre+' '+(c.codigo||'')).includes(q)).filter(c=>!S.fac.solo||MESES.some((_,i)=>ajuste(c.id,an,i+1)))
+    .sort((a,b)=>(Number(b.valorMensual)||0)-(Number(a.valorMensual)||0)||a.nombre.localeCompare(b.nombre));
+  const F=fin(ids,an,S.f.mes),aj=ajustesVis(),sinV=clientesVis().filter(c=>c.estado!=='Inactivo'&&!Number(c.valorMensual)).length;
+  const celda=(c,i)=>{const v=factMes(c.id,an,i+1),r=ajuste(c.id,an,i+1),b=valorBase(c,an,i+1),d=r?v-b:0;
+    return `<td class="${i===mAct?'mact':''} ${d<0?'baja':d>0?'sube':''}" title="${r?`Base ${fCOP(b)} → ${fCOP(v)}\n${esc(r.motivoTipo||'')}: ${esc(r.motivo||'Sin novedad registrada')}`:`Valor base del cliente`}">
+      <input class="pc fc" inputmode="numeric" ${L?'':'readonly'} value="${v?fNum(v):''}" placeholder="—" oninput="this.value=parseMoney(this.value)?fNum(parseMoney(this.value)):''" onchange="setFact('${c.id}',${i+1},this.value)" onkeydown="navProv(event,this,'.fc')">${d?`<i>${d<0?'▼':'▲'}</i>`:''}</td>`};
+  return `<div class="kpis" style="margin-bottom:16px;grid-template-columns:repeat(auto-fill,minmax(190px,1fr))">${kpi(`Facturación ${S.f.mes?MESES[S.f.mes-1]+' ':''}${an}`,fCOP(F.fact),'y')}${kpi('Provisión adicionales',fCOP(F.prov),'k')}${kpi('Total real (fact. + prov.)',fCOP(F.real),'g')}${kpi(`Meses con novedad ${an}`,aj.filter(a=>a.valor!==a.base).length,aj.some(a=>a.valor<a.base)?'o':'')}</div>
+  ${sinV&&L?`<div class="banner" style="background:#fff0dc;border-color:var(--o)">⚠ ${sinV} cliente(s) activo(s) sin valor a facturar. Cárgalo con la columna <b>Valor a facturar</b> en el Excel de clientes o en Base de clientes → Editar.</div>`:''}
+  <div class="card" style="margin-bottom:16px"><div class="bar">${selAnio()}<input placeholder="🔍 Buscar cliente…" value="${esc(S.fac.q)}" onchange="S.fac.q=this.value;render()" style="flex:1 1 200px">
+   <label class="hint" style="display:inline-flex;gap:6px;align-items:center;margin:0;cursor:pointer;white-space:nowrap"><input type="checkbox" style="width:auto" ${S.fac.solo?'checked':''} onchange="S.fac.solo=this.checked;render()"> Solo clientes con novedad</label>
+   <span class="sp"></span><button class="btn btn-o" onclick="exportar('Facturacion',{Facturación:filasFacturas(),'Novedades facturación':filasAjustes()})">⬇ Exportar</button></div>
+  <p class="hint" style="margin:0 0 10px">${L?'Cada mes toma automáticamente el <b>valor a facturar</b> del cliente. Si un mes cambia, escribe el nuevo valor en la celda y registra la novedad (por qué bajó o subió). <span class="lg baja">▼ bajó</span> <span class="lg sube">▲ subió</span>':'Solo lectura para el perfil coordinadora.'}</p>
+  <div class="tw mat"><table class="tb"><thead><tr><th class="fix">Cliente</th><th class="num">Valor base</th>${MESES.map((m,i)=>`<th class="num ${i===mAct?'mact':''}">${m.slice(0,3)}</th>`).join('')}<th class="num">Total ${an}</th></tr></thead><tbody>
+   ${filas.map(c=>{const t=sum(MESES.map((_,i)=>factMes(c.id,an,i+1)));return `<tr><td class="fix"><b>${esc(c.nombre)}</b><small>${esc(nomCoord(c.coordId))}${c.estado==='Inactivo'?' · Inactivo':''}</small></td><td class="num"><b>${Number(c.valorMensual)?fNum(c.valorMensual):'<span class="hint">sin valor</span>'}</b></td>${MESES.map((_,i)=>celda(c,i)).join('')}<td class="num"><b>${fCOP(t)}</b></td></tr>`}).join('')||'<tr><td colspan="15" class="vacio">Sin clientes para mostrar.</td></tr>'}
+   </tbody><tfoot><tr><td class="fix">Total mes</td><td class="num">${fNum(sum(filas.map(c=>c.estado!=='Inactivo'?Number(c.valorMensual)||0:0)))}</td>${MESES.map((_,i)=>`<td class="num ${i===mAct?'mact':''}">${fNum(sum(filas.map(c=>factMes(c.id,an,i+1))))}</td>`).join('')}<td class="num">${fCOP(sum(filas.map(c=>sum(MESES.map((_,i)=>factMes(c.id,an,i+1))))))}</td></tr></tfoot></table></div></div>
+  <div class="card"><h3>Novedades de facturación ${an} (${aj.length})</h3><div class="tw"><table class="tb"><thead><tr><th>Cliente</th><th>Mes</th><th class="num">Valor base</th><th class="num">Facturado</th><th class="num">Diferencia</th><th>Novedad</th><th style="min-width:220px">Detalle</th><th>N.º factura</th><th></th></tr></thead><tbody>
+   ${aj.map(a=>{const d=a.valor-a.base;return `<tr><td style="min-width:160px"><b>${esc(nomCli(a.clienteId))}</b></td><td>${MESES[a.mes-1]}</td><td class="num">${fCOP(a.base)}</td><td class="num">${fCOP(a.valor)}</td><td class="num" style="color:${d<0?'var(--r)':d>0?'var(--gr)':'inherit'}"><b>${d>0?'+':''}${fCOP(d)}</b></td><td>${a.motivoTipo?badge(a.motivoTipo):'<span class="badge b-r">Sin novedad</span>'}</td><td>${esc(a.motivo||'')}<br><small class="hint">${esc(a.actualizadoPor)} · ${fFechaHora(a.actualizadoEn)}</small></td><td>${esc(a.numero||'')}</td>
+     <td style="white-space:nowrap">${L?`<button class="btn btn-o btn-s" onclick="formAjuste('${a.clienteId}',${a.mes})">Editar</button> <button class="btn btn-d btn-s" title="Volver al valor base" onclick="quitarAjuste('${a.id}')">↺ Base</button>`:''}</td></tr>`}).join('')||'<tr><td colspan="9" class="vacio">Todos los meses se facturan con el valor base. 👍</td></tr>'}
+  </tbody></table></div></div>`}
+function setFact(cid,m,val){if(!esLider())return;const an=Number(S.f.anio),v=parseMoney(val),c=cliente(cid),b=valorBase(c,an,m),r=ajuste(cid,an,m);
+  if(v===factMes(cid,an,m))return;
+  if(v===b&&r){quitarAjuste(r.id,true);return}
+  formAjuste(cid,m,v)}
+function formAjuste(cid,m,nuevo){const an=Number(S.f.anio),c=cliente(cid),b=valorBase(c,an,m),r=ajuste(cid,an,m)||{},v=nuevo??(r.valor??b);
+  abrirModal('Novedad de facturación',`<form id="f-aj" onsubmit="guardarAjuste(event,'${cid}',${m})"><div class="fg">
+   ${campo('Cliente',`<input readonly value="${esc(c.nombre)}">`)}${campo('Mes',`<input readonly value="${MESES[m-1]} ${an}">`)}
+   ${campo('Valor base (a facturar)',`<input readonly value="${fCOP(b)}">`)}${campo('Valor facturado este mes',`<input name="valor" required inputmode="numeric" value="${fNum(v)}" oninput="this.value=parseMoney(this.value)?fNum(parseMoney(this.value)):'0';difAj(${b})">`)}
+   <div class="full" id="aj-dif"></div>
+   ${campo('Novedad (por qué cambió)',`<select name="motivoTipo" required><option value="">Seleccione…</option>${opts(TIPOS_AJ,r.motivoTipo)}</select>`)}${campo('Número de factura',`<input name="numero" value="${esc(r.numero||'')}">`)}
+   ${campo('Detalle de la novedad',`<textarea name="motivo" required placeholder="Ej.: Se retiraron 2 operarios desde el día 15">${esc(r.motivo||'')}</textarea>`,'full')}</div>
+   ${histEstados(r)}${traza(r.id?r:null)}<div class="acc"><button type="button" class="btn btn-o" onclick="cerrarModal();render()">Cancelar</button><button class="btn btn-y">Guardar</button></div></form>`);difAj(b)}
+function difAj(b){const v=parseMoney($('#f-aj [name=valor]').value),d=v-b;$('#aj-dif').innerHTML=d?`<div class="banner" style="margin:0;background:${d<0?'#fdecea':'#e3f6ec'};border-color:${d<0?'var(--r)':'var(--gr)'}">${d<0?'▼ Baja':'▲ Sube'} de <b>${fCOP(Math.abs(d))}</b> frente al valor base (${pct(v,b)}% del base).</div>`:'<p class="hint" style="margin:0">Igual al valor base.</p>'}
+function guardarAjuste(e,cid,m){e.preventDefault();const an=Number(S.f.anio),d=Object.fromEntries(new FormData(e.target)),r=ajuste(cid,an,m),b=valorBase(cliente(cid),an,m);
+  d.valor=parseMoney(d.valor);const det=`Facturación ${nomCli(cid)} · ${MESES[m-1]} ${an}: ${fCOP(b)} → ${fCOP(d.valor)} · ${d.motivoTipo}: ${d.motivo}`;
+  if(r){(r.historial=r.historial||[]).push({fecha:ahora(),usuario:usuario(),de:fCOP(r.valor),a:fCOP(d.valor)});actualizar(r,d,'Facturación',det)}
+  else crear('facturas',{clienteId:cid,anio:an,mes:m,fecha:hoy(),...d},'Facturación',det);
+  guardar();cerrarModal();toast('Facturación del mes actualizada');render()}
+function quitarAjuste(id,silencio){const r=db.facturas.find(x=>x.id===id);if(!r)return;if(!silencio&&!confirm(`¿Volver ${nomCli(r.clienteId)} · ${MESES[r.mes-1]} al valor base? La novedad queda en la trazabilidad.`))return;
+  eliminar('facturas',id,'Facturación',`Facturación ${nomCli(r.clienteId)} · ${MESES[r.mes-1]} ${r.anio} vuelve al valor base (antes ${fCOP(r.valor)} · ${r.motivoTipo||''}: ${r.motivo||''})`);guardar();toast('Mes restaurado al valor base');render()}
+
+/* ---------- 12. INICIO DE OPERACIONES ---------- */
+function vInicio(){const ns=[...novVis()].sort((a,b)=>(b.fecha+b.hora).localeCompare(a.fecha+a.hora)),N=statsNov(ns);
+  return `<div class="cols c13"><div class="card"><h3>Registrar novedad de hoy</h3><form onsubmit="guardarNovedad(event,'')"><div class="fg">
+    ${campo('Cliente',`<select name="clienteId" required>${optsCli(clientesRol(),S.f.cliente,'Seleccione…')}</select>`,'full')}
+    ${campo('Fecha',`<input readonly value="${fFecha(hoy())}">`)}${campo('Estado',`<select name="estado">${opts(['Abierto','En seguimiento','Solucionado'],'Abierto')}</select>`)}
+    ${campo('Nombre de la persona',`<input name="persona" required placeholder="Nombre completo">`,'full')}
+    ${campo('Novedad presentada',`<select name="novedad" required><option value="">Seleccione…</option>${opts(TIPOS_NOV,'')}</select>`,'full')}
+    ${campo('Descripción',`<textarea name="descripcion"></textarea>`,'full')}${campo('Cómo se solucionó',`<textarea name="solucion"></textarea>`,'full')}
+    ${campo('Responsable',`<input name="responsable" value="${esc(usuario())}">`,'full')}${campo('Observaciones',`<textarea name="observaciones"></textarea>`,'full')}</div>
+    <div class="acc"><button class="btn btn-y">Guardar novedad</button></div></form></div>
+   <div><div class="kpis" style="margin-bottom:16px">${kpi('Total novedades',N.total,'k')}${kpi('Abiertas',N.a,N.a?'r':'')}${kpi('En seguimiento',N.s,'o')}${kpi('Solucionadas',N.o,'g')}${kpi('% de solución',N.pct+'%','g')}</div>
+    <div class="cols c2" style="margin:0"><div class="card"><h3>Por cliente</h3><div class="ch"><canvas id="n1"></canvas></div></div><div class="card"><h3>Por estado</h3><div class="ch"><canvas id="n3"></canvas></div></div>
+    <div class="card" style="grid-column:1/-1"><h3>Por día</h3><div class="ch" style="height:200px"><canvas id="n2"></canvas></div></div></div></div></div>
+  <div class="card"><h3>Novedades registradas (${ns.length}) <span style="flex:1"></span><button class="btn btn-o btn-s" onclick="exportar('Inicio_operaciones',{Novedades:filasNovedades()})">⬇ Exportar</button></h3><div class="tw"><table class="tb"><thead><tr><th>Fecha</th><th>Hora</th><th>Cliente</th><th>Coordinadora</th><th>Persona</th><th>Novedad</th><th>Solución</th><th>Responsable</th><th>Estado</th><th>Usuario</th><th></th></tr></thead><tbody>
+   ${ns.map(n=>`<tr><td>${fFecha(n.fecha)}</td><td>${n.hora}</td><td><b>${esc(nomCli(n.clienteId))}</b></td><td>${esc(nomCoord(coordDe(n.clienteId)))}</td><td><b>${esc(n.persona||'—')}</b></td><td>${esc(n.novedad)}</td><td>${esc(n.solucion)}</td><td>${esc(n.responsable)}</td><td>${badge(n.estado)}</td><td>${esc(n.creadoPor)}</td><td style="white-space:nowrap"><button class="btn btn-o btn-s" onclick="formNovedad('${n.id}')">Abrir</button> <button class="btn btn-o btn-s" title="Registrar en el módulo Novedades con sus documentos" onclick="formPermiso(null,{nombre:'${esc(n.persona||'').replace(/'/g,'')}',clienteId:'${n.clienteId}',tipo:'${TIPOS_NOV.includes(n.novedad)?n.novedad:''}',fechaDesde:'${n.fecha}'})">📎 Soportes</button></td></tr>`).join('')||'<tr><td colspan="11" class="vacio">Sin novedades en el periodo seleccionado.</td></tr>'}</tbody></table></div></div>`}
+function dInicio(){const ns=novVis(),cnt=f=>{const m={};ns.forEach(n=>{const k=f(n);m[k]=(m[k]||0)+1});return m};
+  const pc=Object.entries(cnt(n=>nomCli(n.clienteId))).sort((a,b)=>b[1]-a[1]).slice(0,8),pd=Object.entries(cnt(n=>n.fecha)).sort(),N=statsNov(ns),ent={scales:{x:{ticks:{precision:0}},y:{ticks:{precision:0}}},plugins:{legend:{display:false}}};
+  grafico('n1',{type:'bar',data:{labels:pc.map(x=>x[0].replace(' (DEMO)','')),datasets:[{label:'Novedades',data:pc.map(x=>x[1]),backgroundColor:COL.y,borderRadius:5}]},options:{indexAxis:'y',...ent}});
+  grafico('n2',{type:'bar',data:{labels:pd.map(x=>fFecha(x[0]).slice(0,5)),datasets:[{label:'Novedades',data:pd.map(x=>x[1]),backgroundColor:COL.k,borderRadius:5}]},options:ent});
+  dona('n3',['Abierto','En seguimiento','Solucionado'],[N.a,N.s,N.o],[COL.r,COL.o,COL.gr])}
+function formNovedad(id){const n=db.novedades.find(x=>x.id===id);if(!n)return;
+  abrirModal('Novedad de inicio de operaciones',`<form onsubmit="guardarNovedad(event,'${id}')"><div class="fg">
+   ${campo('Cliente',`<input readonly value="${esc(nomCli(n.clienteId))}">`)}${campo('Fecha y hora',`<input readonly value="${fFecha(n.fecha)} ${n.hora}">`)}
+   ${campo('Nombre de la persona',`<input name="persona" required value="${esc(n.persona||'')}">`)}${campo('Novedad presentada',`<select name="novedad" required>${opts(TIPOS_NOV.includes(n.novedad)?TIPOS_NOV:[n.novedad,...TIPOS_NOV],n.novedad)}</select>`)}${campo('Descripción',`<textarea name="descripcion">${esc(n.descripcion||'')}</textarea>`,'full')}
+   ${campo('Cómo se solucionó',`<textarea name="solucion">${esc(n.solucion||'')}</textarea>`,'full')}
+   ${campo('Responsable',`<input name="responsable" value="${esc(n.responsable||'')}">`)}${campo('Estado',`<select name="estado">${opts(['Abierto','En seguimiento','Solucionado'],n.estado)}</select>`)}
+   ${campo('Observaciones',`<textarea name="observaciones">${esc(n.observaciones||'')}</textarea>`,'full')}</div>
+   ${histEstados(n)}${traza(n)}<div class="acc">${esLider()?`<button type="button" class="btn btn-d" onclick="borrarNovedad('${id}')">Eliminar</button>`:''}<span style="flex:1"></span><button type="button" class="btn btn-o" onclick="cerrarModal()">Cancelar</button><button class="btn btn-y">Guardar</button></div></form>`)}
+function guardarNovedad(e,id){e.preventDefault();const d=Object.fromEntries(new FormData(e.target));
+  if(id)actualizar(db.novedades.find(x=>x.id===id),d,'Inicio de operaciones',`Novedad: ${d.novedad}`);
+  else{const t=new Date();Object.assign(d,{fecha:hoy(),hora:`${pad(t.getHours())}:${pad(t.getMinutes())}`,coordId:coordDe(d.clienteId)});crear('novedades',d,'Inicio de operaciones',`Novedad: ${d.novedad} · ${d.persona} · ${nomCli(d.clienteId)}`)}
+  guardar();cerrarModal();toast('Novedad guardada');render()}
+function borrarNovedad(id){if(!confirm('¿Eliminar esta novedad?'))return;eliminar('novedades',id,'Inicio de operaciones',`Novedad: ${db.novedades.find(x=>x.id===id).novedad}`);guardar();cerrarModal();render()}
+
+
+/* ---------- 12b. ARCHIVOS ADJUNTOS (IndexedDB) ----------
+   Los PDF y Excel se guardan en IndexedDB del navegador (soporta archivos grandes);
+   los registros solo guardan id, nombre, tipo y tamaño. */
+const Archivos={_db:null,
+  abrir(){return this._db||(this._db=new Promise((ok,ko)=>{const r=indexedDB.open('seguimiento_archivos',1);r.onupgradeneeded=()=>r.result.createObjectStore('f');r.onsuccess=()=>ok(r.result);r.onerror=()=>ko(r.error)}))},
+  async op(modo,fn){const d=await this.abrir();return new Promise((ok,ko)=>{const t=d.transaction('f',modo),r=fn(t.objectStore('f'));t.oncomplete=()=>ok(r&&r.result);t.onerror=()=>ko(t.error)})},
+  put(id,blob){return this.op('readwrite',s=>s.put(blob,id))},get(id){return this.op('readonly',s=>s.get(id))},
+  del(id){return this.op('readwrite',s=>s.delete(id))},limpiar(){return this.op('readwrite',s=>s.clear())}};
+const fTam=b=>b>=1048576?(b/1048576).toFixed(1)+' MB':Math.max(1,Math.round(b/1024))+' KB';
+const extOk=(n,exts)=>exts.some(x=>n.toLowerCase().endsWith(x));
+async function guardarArchivos(files){const out=[];
+  for(const f of files){const id=uid();await Archivos.put(id,f);out.push({id,nombre:f.name,tipo:f.type||'',tam:f.size,fecha:ahora(),usuario:usuario()})}return out}
+async function abrirArchivo(id,nombre,bajar){try{const b=await Archivos.get(id);if(!b)return toast(MODO_NUBE?'Este archivo se cargó desde otro computador. Por ahora los adjuntos quedan guardados solo en el equipo donde se cargaron.':'El archivo no está guardado en este navegador','err');
+  const u=URL.createObjectURL(b);if(bajar||!/\.pdf$/i.test(nombre)){const a=document.createElement('a');a.href=u;a.download=nombre;a.click()}else window.open(u,'_blank');setTimeout(()=>URL.revokeObjectURL(u),60000)}
+  catch(e){toast('No se pudo abrir el archivo','err')}}
+const icoArch=n=>/\.pdf$/i.test(n)?'<span class="fi pdf">PDF</span>':'<span class="fi xls">XLS</span>';
+const archFila=(a,del)=>`<div class="af">${icoArch(a.nombre)}<div><b>${esc(a.nombre)}</b><small>${fTam(a.tam)} · ${fFechaHora(a.fecha)} · ${esc(a.usuario)}</small></div>
+  ${/\.pdf$/i.test(a.nombre)?`<button type="button" class="btn btn-o btn-s" onclick="abrirArchivo('${a.id}','${esc(a.nombre).replace(/'/g,'')}')">Ver</button>`:''}<button type="button" class="btn btn-o btn-s" onclick="abrirArchivo('${a.id}','${esc(a.nombre).replace(/'/g,'')}',1)">⬇ Descargar</button>${del?`<button type="button" class="btn btn-d btn-s" onclick="${del}">✕</button>`:''}</div>`;
+
+/* ---------- 12c. NOVEDADES DE PERSONAL (permisos y soportes) ---------- */
+const TIPOS_NOV=['Vacaciones','Incapacidad','No remunerado','Ausencia injustificada','Calamidad','Licencia por luto','Licencia paternidad','Licencia maternidad','Sanción','Renuncia','Remunerado'];
+const EST_PER=['Pendiente de documentos','En revisión','Aprobada','Rechazada'];
+/* Documentos a solicitar por tipo de novedad: n = nota, d = siempre, g = según el caso */
+const REQ={
+ 'Vacaciones':{n:'Se solicitan con anticipación y deben estar aprobadas por el jefe inmediato antes del disfrute.',d:['Formato de solicitud de vacaciones firmado por el trabajador','Aprobación del jefe inmediato (firma o correo)','Fechas de salida y reintegro definidas']},
+ 'Incapacidad':{n:'El soporte debe estar expedido o transcrito por la EPS (enfermedad general) o la ARL (origen laboral).',d:['Certificado de incapacidad expedido o transcrito por la EPS/ARL (fechas, días y diagnóstico)','Copia de la cédula del trabajador'],g:[
+   {t:'Si la incapacidad es mayor a 2 días',d:['Historia clínica o epicrisis']},{t:'Si la emitió un médico particular o prepagada',d:['Transcripción de la incapacidad ante la EPS']},{t:'Si es por accidente de trabajo',d:['Reporte de accidente de trabajo (FURAT) radicado ante la ARL']}]},
+ 'No remunerado':{n:'Solo se solicita el formato firmado.',d:['Formato de permiso no remunerado firmado']},
+ 'Remunerado':{n:'Solo se solicita el formato.',d:['Formato de permiso remunerado firmado']},
+ 'Ausencia injustificada':{n:'La ausencia no tiene soporte válido; se documenta para el proceso disciplinario.',d:['Reporte de inasistencia (planilla, control de acceso o reporte del cliente)','Comunicación al trabajador solicitando justificación por escrito','Respuesta o justificación del trabajador (si la presenta)','Citación y acta de descargos (si se abre proceso disciplinario)']},
+ 'Calamidad':{n:'Calamidad doméstica: hecho grave e imprevisto que afecta al trabajador o a su núcleo familiar. Siempre se pide el formato y la cédula; además, el soporte según el caso.',d:['Formato de solicitud de permiso por calamidad firmado','Copia de la cédula del trabajador'],g:[
+   {t:'Hospitalización o urgencia de un hijo (caso más común)',d:['Certificado de acompañamiento u hospitalización de la clínica/IPS, con nombre del paciente y fechas','Registro civil de nacimiento del hijo (acredita parentesco)']},
+   {t:'Hospitalización de cónyuge o compañero(a) permanente',d:['Certificado de hospitalización o acompañamiento de la IPS','Registro civil de matrimonio o declaración extrajuicio de unión marital']},
+   {t:'Hospitalización del padre o la madre',d:['Certificado de hospitalización o acompañamiento de la IPS','Registro civil de nacimiento del trabajador (acredita parentesco)']},
+   {t:'Cirugía o enfermedad grave de un familiar',d:['Orden de cirugía, historia clínica o certificado médico del familiar','Documento que acredite el parentesco']},
+   {t:'Emergencia en la vivienda (incendio, inundación, derrumbe, vendaval)',d:['Certificado de Bomberos, Defensa Civil, Gestión del Riesgo o Alcaldía','Fotografías de la afectación','Recibo de servicio público que acredite la dirección']},
+   {t:'Hurto en la vivienda',d:['Denuncia ante la Fiscalía o la Policía','Recibo de servicio público que acredite la dirección']},
+   {t:'Accidente del trabajador o de un familiar fuera del trabajo',d:['Soporte de atención de urgencias','Documento que acredite el parentesco (si es un familiar)']}]},
+ 'Licencia por luto':{n:'Ley 1280 de 2009: 5 días hábiles remunerados por fallecimiento del cónyuge o compañero(a) permanente, o de familiares hasta el segundo grado de consanguinidad, primero de afinidad y primero civil.',d:['Copia de la cédula del trabajador','Registro civil de defunción del familiar fallecido','Copia de la cédula del familiar fallecido'],g:[
+   {t:'Parentesco: padre o madre',d:['Registro civil de nacimiento del trabajador']},{t:'Parentesco: hijo(a)',d:['Registro civil de nacimiento del hijo(a)']},
+   {t:'Parentesco: hermano(a)',d:['Registro civil de nacimiento del trabajador y del hermano(a)']},
+   {t:'Parentesco: abuelo(a) materno',d:['Copia de la cédula de la mamá del trabajador','Registro civil de nacimiento correspondiente']},
+   {t:'Parentesco: abuelo(a) paterno',d:['Copia de la cédula del papá del trabajador','Registro civil de nacimiento correspondiente']},
+   {t:'Parentesco: nieto(a)',d:['Registro civil de nacimiento del hijo(a) del trabajador y del nieto(a)']},
+   {t:'Parentesco: cónyuge o compañero(a) permanente',d:['Registro civil de matrimonio o declaración extrajuicio de unión marital']},
+   {t:'Parentesco: suegro(a)',d:['Registro civil de matrimonio o declaración extrajuicio de unión marital','Registro civil de nacimiento del cónyuge o compañero(a)']}]},
+ 'Licencia paternidad':{n:'Ley 2114 de 2021: 2 semanas remuneradas. El registro civil se entrega dentro de los 30 días siguientes al nacimiento.',d:['Registro civil de nacimiento del bebé','Certificado de nacido vivo','Copia de la cédula del trabajador','Formato de solicitud de licencia']},
+ 'Licencia maternidad':{n:'Ley 1822 de 2017: 18 semanas remuneradas. La licencia la expide la EPS.',d:['Certificado de licencia de maternidad expedido por la EPS','Certificado de nacido vivo','Registro civil de nacimiento del bebé','Copia de la cédula de la trabajadora','Epicrisis o historia clínica del parto (si la EPS la exige)']},
+ 'Sanción':{n:'Soportes del proceso disciplinario según el reglamento interno de trabajo.',d:['Soportes de la falta (reportes, evidencias, quejas del cliente)','Citación a descargos firmada como recibida','Acta de descargos firmada','Comunicación de la sanción firmada por el trabajador (o con testigos si se niega)']},
+ 'Renuncia':{n:'Se gestiona el retiro y la liquidación.',d:['Carta de renuncia firmada con fecha de retiro','Comunicación de aceptación de la renuncia','Paz y salvo (dotación, carné y elementos entregados)','Orden de examen médico de egreso','Certificación bancaria para el pago de la liquidación']}};
+const reqItems=t=>{const r=REQ[t];if(!r)return[];return[...r.d,...(r.g||[]).flatMap(g=>g.d.map(x=>g.t+' · '+x))]};
+function reqHTML(t,rec=[]){const r=REQ[t];if(!r)return '<div class="req vacio-r">Selecciona la novedad para ver los documentos que se deben solicitar.</div>';
+  const ck=(v,lab)=>`<label class="ck"><input type="checkbox" name="doc" value="${esc(v)}" ${rec.includes(v)?'checked':''}> ${esc(lab)}</label>`;
+  return `<div class="req"><h5>📋 Documentos que se deben solicitar · ${esc(t)}</h5><p>${esc(r.n)}</p>
+   <div class="req-g"><b>Siempre</b>${r.d.map(x=>ck(x,x)).join('')}</div>
+   ${(r.g||[]).length?`<p style="margin-top:10px"><b>Además, según el caso:</b></p>${r.g.map(g=>`<div class="req-g"><b>${esc(g.t)}</b>${g.d.map(x=>ck(g.t+' · '+x,x)).join('')}</div>`).join('')}`:''}
+   <p class="hint">Marca cada documento a medida que lo recibas. Lista de referencia: valídala con Gestión Humana.</p></div>`}
+const permVis=()=>{const ids=idsVis();return db.permisos.filter(p=>ids.has(p.clienteId)&&enPeriodo(p.fechaDesde||p.creadoEn.slice(0,10)))};
+function vPermisos(){const q=norm(S.per.q),l=permVis().filter(p=>(!S.per.tipo||p.tipo===S.per.tipo)&&(!S.per.estado||p.estado===S.per.estado)&&(!q||norm([p.nombre,p.cc,nomCli(p.clienteId)].join(' ')).includes(q))).sort((a,b)=>b.creadoEn.localeCompare(a.creadoEn)),
+  all=permVis(),n=e=>all.filter(p=>p.estado===e).length;
+  return `<div class="kpis" style="margin-bottom:16px">${kpi('Novedades del periodo',all.length,'k')}${kpi('Pendientes de documentos',n('Pendiente de documentos'),n('Pendiente de documentos')?'r':'')}${kpi('En revisión',n('En revisión'),'o')}${kpi('Aprobadas',n('Aprobada'),'g')}${kpi('Rechazadas',n('Rechazada'))}</div>
+  <div class="card"><div class="bar"><input placeholder="🔍 Buscar nombre, cédula o cliente…" value="${esc(S.per.q)}" onchange="S.per.q=this.value;render()" style="flex:1 1 240px">
+   <select onchange="S.per.tipo=this.value;render()"><option value="">Todas las novedades</option>${opts(TIPOS_NOV,S.per.tipo)}</select>
+   <select onchange="S.per.estado=this.value;render()"><option value="">Todos los estados</option>${opts(EST_PER,S.per.estado)}</select><span class="sp"></span>
+   <button class="btn btn-y" onclick="formPermiso()">+ Registrar novedad</button><button class="btn btn-o" onclick="exportar('Novedades_personal',{Novedades:filasPermisos()})">⬇ Exportar</button></div>
+  <div class="tw"><table class="tb"><thead><tr><th>Registro</th><th>Nombre</th><th>C.C.</th><th>Cliente</th><th>Novedad</th><th>Desde</th><th>Hasta</th><th>Documentos</th><th>Adjuntos</th><th>Estado</th><th></th></tr></thead><tbody>
+  ${l.map(p=>{const it=reqItems(p.tipo),r=(p.docsRecibidos||[]).filter(x=>it.includes(x)).length;return `<tr><td>${fFecha(p.creadoEn.slice(0,10))}</td><td><b>${esc(p.nombre)}</b></td><td>${esc(p.cc)}</td><td>${esc(nomCli(p.clienteId))}</td><td>${esc(p.tipo)}</td><td>${fFecha(p.fechaDesde)}</td><td>${fFecha(p.fechaHasta)}</td><td>${r} de ${it.length} ${barra(pct(r,it.length))}</td><td>${(p.archivos||[]).length?`📎 ${p.archivos.length}`:'—'}</td><td>${badge(p.estado)}</td><td><button class="btn btn-o btn-s" onclick="formPermiso('${p.id}')">Abrir</button></td></tr>`}).join('')||'<tr><td colspan="11" class="vacio">Sin novedades registradas en el periodo.</td></tr>'}
+  </tbody></table></div><p class="hint">${l.length} registros · los PDF se guardan en este navegador.</p></div>`}
+function formPermiso(id,pre){const p=id?db.permisos.find(x=>x.id===id):{estado:'Pendiente de documentos',fechaDesde:hoy(),clienteId:S.f.cliente||'',docsRecibidos:[],archivos:[],...pre};if(!p)return;
+  abrirModal(id?'Novedad de personal':'Registrar novedad de personal',`<form id="f-per" onsubmit="guardarPermiso(event,'${id||''}')"><div class="fg">
+   ${campo('Nombre',`<input name="nombre" required value="${esc(p.nombre||'')}">`)}${campo('C.C.',`<input name="cc" required inputmode="numeric" value="${esc(p.cc||'')}">`)}
+   ${campo('Cliente',`<select name="clienteId" required>${optsCli(clientesRol(),p.clienteId,'Seleccione…')}</select>`)}
+   ${campo('Novedad',`<select name="tipo" required onchange="$('#req-box').innerHTML=reqHTML(this.value)"><option value="">Seleccione…</option>${opts(TIPOS_NOV,p.tipo)}</select>`)}
+   <div class="full" id="req-box">${reqHTML(p.tipo,p.docsRecibidos)}</div>
+   ${campo('Fecha desde',`<input type="date" name="fechaDesde" value="${p.fechaDesde||''}">`)}${campo('Fecha hasta',`<input type="date" name="fechaHasta" value="${p.fechaHasta||''}">`)}
+   ${campo('Estado',`<select name="estado">${opts(EST_PER,p.estado)}</select>`)}<span></span>
+   <div class="sep">Documentos de soporte (PDF)</div>
+   <div class="full">${(p.archivos||[]).map(a=>archFila(a,id?`quitarAdjunto('${id}','${a.id}')`:'')).join('')||'<p class="hint" style="margin:0 0 8px">Aún no hay documentos cargados.</p>'}
+    <label class="drop" style="padding:16px;margin:8px 0 0"><b>📎 Cargar documentos PDF</b><span id="per-sel">Haz clic para seleccionar uno o varios archivos</span><input type="file" name="archivos" accept=".pdf,application/pdf" multiple hidden onchange="$('#per-sel').textContent=this.files.length?[...this.files].map(f=>f.name).join(', '):'Haz clic para seleccionar uno o varios archivos'"></label></div>
+   ${campo('Observaciones',`<textarea name="observaciones">${esc(p.observaciones||'')}</textarea>`,'full')}</div>
+   ${histEstados(p)}${traza(p)}<div class="acc">${id&&esLider()?`<button type="button" class="btn btn-d" onclick="borrarPermiso('${id}')">Eliminar</button>`:''}<span style="flex:1"></span><button type="button" class="btn btn-o" onclick="cerrarModal()">Cancelar</button><button class="btn btn-y">Guardar</button></div></form>`,true)}
+async function guardarPermiso(e,id){e.preventDefault();const f=e.target,fd=new FormData(f),d=Object.fromEntries(fd),files=[...f.archivos.files];
+  d.docsRecibidos=fd.getAll('doc');delete d.doc;delete d.archivos;
+  const malos=files.filter(x=>!extOk(x.name,['.pdf']));if(malos.length)return toast('Solo se permiten archivos PDF','err');
+  let nuevos=[];try{nuevos=await guardarArchivos(files)}catch(err){return toast('No se pudieron guardar los PDF en este navegador','err')}
+  d.coordId=coordDe(d.clienteId);const det=`Novedad de personal: ${d.tipo} · ${d.nombre} (C.C. ${d.cc})${nuevos.length?` · ${nuevos.length} PDF`:''}`;
+  if(id){const p=db.permisos.find(x=>x.id===id);d.archivos=(p.archivos||[]).concat(nuevos);actualizar(p,d,'Novedades',det)}
+  else{d.archivos=nuevos;crear('permisos',d,'Novedades',det)}
+  guardar();cerrarModal();toast('Novedad guardada');render()}
+async function quitarAdjunto(pid,aid){if(!confirm('¿Eliminar este documento?'))return;const p=db.permisos.find(x=>x.id===pid),a=p.archivos.find(x=>x.id===aid);
+  p.archivos=p.archivos.filter(x=>x.id!==aid);try{await Archivos.del(aid)}catch(e){}auditar('Novedades','Eliminación',`Documento ${a.nombre} de ${p.nombre}`);guardar();formPermiso(pid);render()}
+async function borrarPermiso(id){if(!confirm('¿Eliminar esta novedad y sus documentos?'))return;const p=db.permisos.find(x=>x.id===id);
+  for(const a of p.archivos||[])try{await Archivos.del(a.id)}catch(e){}eliminar('permisos',id,'Novedades',`Novedad de personal: ${p.tipo} · ${p.nombre}`);guardar();cerrarModal();render()}
+
+/* ---------- 12d. DOCUMENTOS DE LA OPERACIÓN (por mes) ---------- */
+const CAT_DOC=['Nómina','Seguridad social','Facturación','Novedades de personal','Actas y visitas','Informes','Contratos','Otro'];
+const docsVis=()=>{const ids=idsVis(),todos=!S.f.cliente&&!coordFiltro();return db.documentos.filter(d=>d.anio===Number(S.f.anio)&&(d.clienteId?ids.has(d.clienteId):(todos||!S.f.cliente)))};
+function vDocumentos(){const all=docsVis(),m=Number(S.doc.mes)||0,q=norm(S.doc.q);
+  const l=all.filter(d=>(!m||d.mes===m)&&(!S.doc.cat||d.categoria===S.doc.cat)&&(!q||norm([d.archivo.nombre,d.descripcion,d.categoria,nomCli(d.clienteId)].join(' ')).includes(q))).sort((a,b)=>b.creadoEn.localeCompare(a.creadoEn));
+  return `<div class="card" style="margin-bottom:16px"><div class="bar"><b style="font-size:16px">Documentación ${S.f.anio}</b>${selAnio()}<span class="sp"></span><button class="btn btn-y" onclick="formDocs()">⬆ Cargar documentos</button><button class="btn btn-o" onclick="exportar('Documentos',{Documentos:filasDocumentos()})">⬇ Exportar listado</button></div>
+   <div class="meses">${MESES.map((n,i)=>{const c=all.filter(d=>d.mes===i+1);return `<button class="mes ${m===i+1?'on':''}" onclick="S.doc.mes=${m===i+1?0:i+1};render()"><b>${n}</b><small>${c.length?`${c.length} archivo${c.length>1?'s':''} · ${fTam(sum(c.map(d=>d.archivo.tam)))}`:'Sin archivos'}</small></button>`}).join('')}</div></div>
+  <div class="card"><div class="bar"><b>${m?MESES[m-1]+' '+S.f.anio:'Todo el año '+S.f.anio}</b>${m?'<button class="btn btn-o btn-s" onclick="S.doc.mes=0;render()">Ver todo el año</button>':''}<span class="sp"></span>
+   <input placeholder="🔍 Buscar archivo…" value="${esc(S.doc.q)}" onchange="S.doc.q=this.value;render()"><select onchange="S.doc.cat=this.value;render()"><option value="">Todas las categorías</option>${opts(CAT_DOC,S.doc.cat)}</select></div>
+  <div class="tw"><table class="tb"><thead><tr><th>Archivo</th><th>Mes</th><th>Categoría</th><th>Cliente</th><th>Descripción</th><th>Cargado por</th><th class="num">Tamaño</th><th></th></tr></thead><tbody>
+  ${l.map(d=>`<tr><td><div style="display:flex;gap:8px;align-items:center">${icoArch(d.archivo.nombre)}<b>${esc(d.archivo.nombre)}</b></div></td><td>${MESES[d.mes-1]}</td><td>${badge(d.categoria)}</td><td>${d.clienteId?esc(nomCli(d.clienteId)):'<span class="hint">General</span>'}</td><td>${esc(d.descripcion)}</td><td>${esc(d.creadoPor)}<br><small class="hint">${fFechaHora(d.creadoEn)}</small></td><td class="num">${fTam(d.archivo.tam)}</td>
+   <td class="num" style="white-space:nowrap">${/\.pdf$/i.test(d.archivo.nombre)?`<button class="btn btn-o btn-s" onclick="abrirArchivo('${d.archivo.id}','${esc(d.archivo.nombre).replace(/'/g,'')}')">Ver</button> `:''}<button class="btn btn-o btn-s" onclick="abrirArchivo('${d.archivo.id}','${esc(d.archivo.nombre).replace(/'/g,'')}',1)">⬇</button> ${esLider()||d.creadoPor===usuario()?`<button class="btn btn-d btn-s" onclick="borrarDoc('${d.id}')">✕</button>`:''}</td></tr>`).join('')||'<tr><td colspan="8" class="vacio">No hay documentos cargados para este periodo.</td></tr>'}
+  </tbody></table></div><p class="hint">${l.length} archivos · PDF y Excel guardados en este navegador.</p></div>`}
+function formDocs(){
+  abrirModal('Cargar documentos',`<form onsubmit="guardarDocs(event)"><div class="fg">
+   ${campo('Año',`<select name="anio">${opts(anios(),S.f.anio)}</select>`)}${campo('Mes',`<select name="mes">${opts(MESES.map((n,i)=>[i+1,n]),S.doc.mes||S.f.mes||HOY.getMonth()+1)}</select>`)}
+   ${campo('Cliente',`<select name="clienteId"><option value="">General de la operación</option>${optsCli(clientesRol(),S.f.cliente)}</select>`)}${campo('Categoría',`<select name="categoria">${opts(CAT_DOC,'Informes')}</select>`)}
+   ${campo('Descripción',`<input name="descripcion" placeholder="Ej.: Planilla de seguridad social septiembre">`,'full')}
+   <label class="drop full" style="margin:0"><b>⬆ Seleccionar archivos PDF o Excel</b><span id="doc-sel">Puedes elegir varios a la vez (.pdf, .xlsx, .xls)</span><input type="file" name="archivos" required multiple accept=".pdf,.xlsx,.xls" hidden onchange="$('#doc-sel').textContent=[...this.files].map(f=>f.name).join(', ')"></label></div>
+   <div class="acc"><button type="button" class="btn btn-o" onclick="cerrarModal()">Cancelar</button><button class="btn btn-y">Cargar</button></div></form>`)}
+async function guardarDocs(e){e.preventDefault();const f=e.target,d=Object.fromEntries(new FormData(f)),files=[...f.archivos.files];
+  if(!files.length)return toast('Selecciona al menos un archivo','err');
+  if(files.some(x=>!extOk(x.name,['.pdf','.xlsx','.xls'])))return toast('Solo se permiten archivos PDF o Excel','err');
+  let metas;try{metas=await guardarArchivos(files)}catch(err){return toast('No se pudieron guardar los archivos en este navegador','err')}
+  metas.forEach(a=>crear('documentos',{anio:Number(d.anio),mes:Number(d.mes),clienteId:d.clienteId,categoria:d.categoria,descripcion:d.descripcion,archivo:a},'Documentos',`Documento ${a.nombre} · ${MESES[d.mes-1]} ${d.anio}`));
+  S.f.anio=Number(d.anio);S.doc.mes=Number(d.mes);guardar();cerrarModal();toast(`${metas.length} archivo(s) cargado(s)`);render()}
+async function borrarDoc(id){if(!confirm('¿Eliminar este documento?'))return;const d=db.documentos.find(x=>x.id===id);try{await Archivos.del(d.archivo.id)}catch(e){}
+  eliminar('documentos',id,'Documentos',`Documento ${d.archivo.nombre}`);guardar();render()}
+
+/* ---------- 12e. LOGO ---------- */
+function cargarLogo(inp){const f=inp.files[0];inp.value='';if(!f)return;if(!esLider())return toast('Solo el líder puede cambiar el logo','err');const rd=new FileReader();rd.onload=()=>{const im=new Image();im.onload=()=>{const T=200,k=Math.min(1,T/Math.max(im.width,im.height)),cv=document.createElement('canvas');
+  cv.width=Math.round(im.width*k);cv.height=Math.round(im.height*k);cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);db.config.logo=cv.toDataURL('image/png');auditar('Configuración','Modificación','Logo actualizado');guardar();render();toast('Logo actualizado')};im.src=rd.result};rd.readAsDataURL(f)}
+
+/* ---------- 13. REPORTES Y EXPORTACIÓN ---------- */
+function datosPvF(){const g=S.rep.grupo,an=S.f.anio,mes=S.f.mes;
+  if(g==='mes')return MESES.map((m,i)=>({n:m,...fin(idsVis(),an,i+1)}));
+  if(g==='coord')return coordsVis().map(c=>({n:c.nombre,...fin(new Set(clientesVis().filter(x=>x.coordId===c.id).map(x=>x.id)),an,mes)}));
+  return clientesVis().map(c=>({n:c.nombre,...fin(new Set([c.id]),an,mes)})).filter(r=>r.prov||r.fact).sort((a,b)=>b.real-a.real)}
+function vReportes(){const D=datosPvF(),T=fin(idsVis(),S.f.anio,S.rep.grupo==='mes'?'':S.f.mes),per=S.rep.grupo==='mes'||!S.f.mes?`Año ${S.f.anio}`:`${MESES[S.f.mes-1]} ${S.f.anio}`;
+  const ex=(t,fn)=>`<button class="btn btn-o" onclick="${fn}">⬇ ${t}</button>`;
+  return `<div class="card" style="margin-bottom:16px"><h3>Facturación real (facturado + provisión de adicionales) · ${per}<span style="flex:1"></span><div class="seg">${[['cliente','Por cliente'],['coord','Por coordinadora'],['mes','Por mes']].map(([k,t])=>`<button class="${S.rep.grupo===k?'on':''}" onclick="S.rep.grupo='${k}';render()">${t}</button>`).join('')}</div></h3>
+   <div class="kpis" style="margin-bottom:14px;grid-template-columns:repeat(auto-fill,minmax(190px,1fr))">${kpi('Total facturado',fCOP(T.fact),'y')}${kpi('Provisión adicionales',fCOP(T.prov),'k')}${kpi('Total real',fCOP(T.real),'g')}${kpi('% adicionales sobre total',T.pp+'%')}</div>
+   <div class="ch" style="height:300px"><canvas id="r1"></canvas></div>
+   <div class="tw" style="margin-top:14px"><table class="tb"><thead><tr><th>${{cliente:'Cliente',coord:'Coordinadora',mes:'Mes'}[S.rep.grupo]}</th><th class="num">Facturación</th><th class="num">Provisión adicionales</th><th class="num">Total real</th><th style="min-width:140px">% adicionales</th></tr></thead><tbody>
+   ${D.map(r=>`<tr><td><b>${esc(r.n)}</b></td><td class="num">${fCOP(r.fact)}</td><td class="num">${fCOP(r.prov)}</td><td class="num"><b>${fCOP(r.real)}</b></td><td>${r.real?`<b>${r.pp}%</b><div class="prog"><i style="width:${r.pp}%"></i></div>`:'—'}</td></tr>`).join('')||'<tr><td colspan="5" class="vacio">Sin información financiera en el periodo.</td></tr>'}
+   </tbody><tfoot><tr><td>Total</td><td class="num">${fCOP(T.fact)}</td><td class="num">${fCOP(T.prov)}</td><td class="num">${fCOP(T.real)}</td><td>${T.pp}%</td></tr></tfoot></table></div></div>
+  <div class="card" style="margin-bottom:16px"><h3>Cumplimiento de visitas por coordinadora</h3><div class="tw"><table class="tb"><thead><tr><th>Coordinadora</th><th>Clientes</th><th>Programadas</th><th>Realizadas</th><th style="min-width:140px">Cumplimiento</th><th>Pend. abiertos</th><th>Vencidos</th></tr></thead><tbody>
+   ${coordsVis().map(c=>{const s=statsCoord(c.id);return `<tr><td><b>${esc(c.nombre)}</b></td><td>${s.clientes}</td><td>${s.prog}</td><td>${s.real}</td><td><b>${s.pct}%</b>${barra(s.pct)}</td><td>${s.pend}</td><td>${s.venc}</td></tr>`}).join('')}</tbody></table></div></div>
+  <div class="card"><h3>Exportar a Excel</h3><p class="hint" style="margin:-6px 0 12px">Las exportaciones respetan los filtros generales de la barra superior.</p><div class="bar" style="margin:0">
+   <button class="btn btn-y" onclick="exportarTodo()">⬇ Reporte consolidado (todas las hojas)</button>
+   ${ex('Clientes',"exportar('Clientes',{Clientes:filasClientes()})")}${ex('Visitas',"exportar('Visitas',{Visitas:filasVisitas()})")}${ex('Pendientes',"exportar('Pendientes',{Pendientes:filasPendientes()})")}${ex('Provisiones',"exportar('Provisiones',{Provisiones:filasProvisiones()})")}${ex('Facturación',"exportar('Facturacion',{Facturación:filasFacturas()})")}${ex('Inicio de operaciones',"exportar('Inicio_operaciones',{Novedades:filasNovedades()})")}${ex('Novedades de personal',"exportar('Novedades_personal',{Novedades:filasPermisos()})")}${ex('Listado de documentos',"exportar('Documentos',{Documentos:filasDocumentos()})")}${ex('Facturación real',"exportar('Provision_vs_Facturacion',{Reporte:filasPvF()})")}</div></div>`}
+function dReportes(){const D=datosPvF().slice(0,S.rep.grupo==='cliente'?15:99);grafico('r1',{type:'bar',data:{labels:D.map(r=>r.n.replace(' (DEMO)','').slice(0,22)),datasets:dsPF(D.map(r=>r.prov),D.map(r=>r.fact))},options:ejeCOP})}
+/* Filas para exportación */
+const filasClientes=()=>clientesVis().map(c=>({'Código cliente':c.codigo,'Cliente':c.nombre,'Coordinadora':nomCoord(c.coordId),'Jefe':c.jefe||'','Valor a facturar':Number(c.valorMensual)||0,'Proyecto':c.proyecto,'Ciudad':c.ciudad,'Dirección':c.direccion,'Estado':c.estado,'Fecha inicio':fFecha(c.fechaInicio),'Fecha final':fFecha(c.fechaFin),'Observaciones':c.observaciones}));
+const filasVisitas=()=>visitasVis().sort((a,b)=>a.fecha.localeCompare(b.fecha)).map(v=>({'Cliente':nomCli(v.clienteId),'Coordinadora':nomCoord(coordDe(v.clienteId)),'Fecha':fFecha(v.fecha),'Hora':v.hora,'Tipo':v.tipo,'Objetivo':v.objetivo,'Estado':v.estado,'Fecha real':fFecha(v.fechaReal),'Comentarios':v.comentarios,'Hallazgos':v.hallazgos,'Compromisos':v.compromisos,'Observaciones':v.observaciones,'Creado':fFechaHora(v.creadoEn),'Actualizado':fFechaHora(v.actualizadoEn),'Usuario':v.actualizadoPor}));
+const filasPendientes=()=>pendFiltrados().map(p=>({'Alerta':alerta(p).t,'Cliente':nomCli(p.clienteId),'Coordinadora':nomCoord(coordDe(p.clienteId)),'Pendiente':p.descripcion,'Responsable':p.responsable,'Fecha creación':fFechaHora(p.creadoEn),'Fecha límite':fFecha(p.fechaLimite),'Días restantes':p.estado==='Completado'?'':diasEntre(hoy(),p.fechaLimite),'Prioridad':p.prioridad,'Estado':p.estado,'Comentarios':(p.comentarios||[]).map(c=>`[${fFechaHora(c.fecha)}] ${c.usuario}: ${c.texto}`).join('\n')}));
+const filasProvisiones=()=>{const ids=idsVis(),an=Number(S.f.anio);return db.provisiones.filter(p=>ids.has(p.clienteId)&&p.anio===an).map(p=>{const r={'Cliente':nomCli(p.clienteId),'Coordinadora':nomCoord(coordDe(p.clienteId)),'Año':p.anio};MESES.forEach((m,i)=>r[m]=p.valores[i]||0);r['Total anual']=sum(p.valores);return r})};
+const filasFacturas=()=>{const an=Number(S.f.anio);return clientesVis().map(c=>{const r={'Cliente':c.nombre,'Coordinadora':nomCoord(c.coordId),'Año':an,'Valor base':Number(c.valorMensual)||0};MESES.forEach((m,i)=>r[m]=factMes(c.id,an,i+1));r['Total']=sum(MESES.map((_,i)=>factMes(c.id,an,i+1)));return r})};
+const filasAjustes=()=>ajustesVis().map(a=>({'Cliente':nomCli(a.clienteId),'Mes':MESES[a.mes-1],'Año':a.anio,'Valor base':a.base,'Facturado':a.valor,'Diferencia':a.valor-a.base,'Novedad':a.motivoTipo||'','Detalle':a.motivo||'','N.º factura':a.numero||'','Registró':a.actualizadoPor,'Fecha':fFechaHora(a.actualizadoEn)}));
+const filasNovedades=()=>novVis().map(n=>({'Fecha':fFecha(n.fecha),'Hora':n.hora,'Cliente':nomCli(n.clienteId),'Coordinadora':nomCoord(coordDe(n.clienteId)),'Persona':n.persona||'','Novedad':n.novedad,'Descripción':n.descripcion,'Cómo se solucionó':n.solucion,'Responsable':n.responsable,'Estado':n.estado,'Observaciones':n.observaciones,'Usuario':n.creadoPor}));
+const filasPvF=()=>datosPvF().map(r=>({[{cliente:'Cliente',coord:'Coordinadora',mes:'Mes'}[S.rep.grupo]]:r.n,'Facturación':r.fact,'Provisión adicionales':r.prov,'Total real':r.real,'% adicionales':r.pp}));
+const filasPermisos=()=>permVis().map(p=>{const it=reqItems(p.tipo);return{'Registro':fFechaHora(p.creadoEn),'Nombre':p.nombre,'C.C.':p.cc,'Cliente':nomCli(p.clienteId),'Coordinadora':nomCoord(coordDe(p.clienteId)),'Novedad':p.tipo,'Desde':fFecha(p.fechaDesde),'Hasta':fFecha(p.fechaHasta),'Documentos recibidos':`${(p.docsRecibidos||[]).filter(x=>it.includes(x)).length} de ${it.length}`,'Documentos faltantes':it.filter(x=>!(p.docsRecibidos||[]).includes(x)).join('\n'),'Adjuntos':(p.archivos||[]).map(a=>a.nombre).join(', '),'Estado':p.estado,'Observaciones':p.observaciones,'Usuario':p.creadoPor}});
+const filasDocumentos=()=>docsVis().map(d=>({'Año':d.anio,'Mes':MESES[d.mes-1],'Archivo':d.archivo.nombre,'Categoría':d.categoria,'Cliente':d.clienteId?nomCli(d.clienteId):'General','Descripción':d.descripcion,'Tamaño':fTam(d.archivo.tam),'Cargado por':d.creadoPor,'Fecha de carga':fFechaHora(d.creadoEn)}));
+const filasAuditoria=()=>db.auditoria.map(a=>({'Fecha':fFechaHora(a.fecha),'Usuario':a.usuario,'Módulo':a.modulo,'Acción':a.accion,'Detalle':a.detalle}));
+function exportar(nombre,hojas,silencio){if(!window.XLSX)return toast('No se pudo cargar la librería de Excel (requiere internet)','err');
+  const wb=XLSX.utils.book_new();Object.entries(hojas).forEach(([h,f])=>XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(f.length?f:[{Información:'Sin registros'}]),h.slice(0,31)));
+  XLSX.writeFile(wb,`${nombre}_${hoy()}.xlsx`);if(!silencio){auditar('Reportes','Exportación',nombre);guardar()}toast('Archivo Excel generado')}
+function exportarTodo(){const g=S.rep.grupo;S.pfBak=S.pf;S.pf={coord:'',cliente:'',prioridad:'',estado:'',desde:'',hasta:'',alerta:'',q:''};
+  exportar('Reporte_consolidado',{Clientes:filasClientes(),Visitas:filasVisitas(),Pendientes:filasPendientes(),Provisiones:filasProvisiones(),Facturación:filasFacturas(),'Novedades facturación':filasAjustes(),'Inicio de operaciones':filasNovedades(),'Novedades personal':filasPermisos(),'Prov vs Fact':filasPvF()});S.pf=S.pfBak;S.rep.grupo=g}
+
+/* ---------- 14. CONFIGURACIÓN ---------- */
+function vConfig(){const L=esLider(),nd=['coordinadoras','clientes','visitas','pendientes','provisiones','facturas','novedades','permisos'].reduce((t,k)=>t+db[k].filter(r=>r.demo).length,0);
+  return `${cardUsuarios()}<div class="cols c2">
+   <div class="card"><h3>Usuario y perfil</h3><p>Sesión actual: <b>${esc(usuario())}</b> · Perfil: ${badge(L?'Líder':'Coordinadora').replace('b-n','b-y')}</p>
+    ${L?campo('Nombre del líder (aparece en comentarios y trazabilidad)',`<input value="${esc(db.config.lider)}" onchange="db.config.lider=this.value.trim()||'Líder de operaciones';guardar();render()">`):''}
+    <p class="hint">Use el selector "Ver como" de la barra superior para cambiar de perfil. <b>Líder:</b> ve y administra todo. <b>Coordinadora:</b> ve solo sus clientes; registra visitas, pendientes, comentarios y novedades; provisiones y facturación en modo consulta. Aún no hay inicio de sesión con contraseña.</p></div>
+   <div class="card"><h3>Datos de prueba</h3><p>${nd?`Hay <b>${nd}</b> registros de prueba marcados como <span class="demo">DEMO</span>.`:'No hay datos de prueba cargados.'}</p>
+    ${L?`<div class="bar" style="margin:0">${nd?'<button class="btn btn-d" onclick="eliminarDemo()">Eliminar datos de prueba</button>':'<button class="btn btn-o" onclick="sembrarDemo();guardar();render()">Cargar datos de prueba</button>'}</div>`:''}</div>
+   <div class="card"><h3>Logo</h3><div style="display:flex;gap:14px;align-items:center"><span class="logo" style="width:64px;height:64px;font-size:26px">${db.config.logo?`<img src="${db.config.logo}" alt="">`:'S'}</span><div class="bar" style="margin:0"><label class="btn btn-y">Cargar imagen<input type="file" accept="image/*" hidden onchange="cargarLogo(this)"></label>${db.config.logo?`<button class="btn btn-o" onclick="db.config.logo='';guardar();render()">Quitar logo</button>`:''}</div></div><p class="hint">También puedes hacer clic directamente sobre el icono junto a "Seguimiento" en el menú.</p></div>
+   <div class="card"><h3>Copia de seguridad</h3><p class="hint" style="margin-top:0">${MODO_NUBE?'La información está en línea (Firebase) y se comparte con todos los usuarios. Descarga':'La información se guarda en este navegador. Descarga'} una copia periódicamente o para pasarla a otro equipo. La copia no incluye los PDF y Excel adjuntos (Novedades y Documentos): esos quedan en este navegador.</p>
+    <div class="bar" style="margin:0"><button class="btn btn-k" onclick="respaldo()">⬇ Descargar copia (.json)</button>${L?`<label class="btn btn-o">⬆ Restaurar copia<input type="file" accept=".json" hidden onchange="restaurar(this)"></label><button class="btn btn-d" onclick="reiniciar()">Borrar toda la información</button>`:''}</div></div>
+   <div class="card"><h3>Conexión a base de datos (preparado)</h3><p class="hint" style="margin-top:0">Toda la lectura y escritura pasa por el objeto <b>Almacen</b> del código (funciones <i>cargar</i> y <i>guardar</i>). Para conectar Google Sheets, Firebase o Supabase se reemplazan esas dos funciones, sin tocar los módulos. Cada registro ya guarda usuario, fechas e historial.</p></div></div>
+  ${L?`<div class="card"><h3>Trazabilidad · registro de acciones <span style="flex:1"></span><button class="btn btn-o btn-s" onclick="exportar('Trazabilidad',{Trazabilidad:filasAuditoria()})">⬇ Exportar</button></h3><div class="tw" style="max-height:420px;overflow:auto"><table class="tb"><thead><tr><th>Fecha</th><th>Usuario</th><th>Módulo</th><th>Acción</th><th>Detalle</th></tr></thead><tbody>
+   ${db.auditoria.slice(0,200).map(a=>`<tr><td style="white-space:nowrap">${fFechaHora(a.fecha)}</td><td>${esc(a.usuario)}</td><td>${esc(a.modulo)}</td><td>${esc(a.accion)}</td><td>${esc(a.detalle)}</td></tr>`).join('')||'<tr><td colspan="5" class="vacio">Aún no hay acciones registradas.</td></tr>'}</tbody></table></div><p class="hint">Se muestran las últimas 200 acciones de ${db.auditoria.length}.</p></div>`:''}`}
+function respaldo(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(db)],{type:'application/json'}));a.download=`copia_seguimiento_${hoy()}.json`;a.click();toast('Copia descargada')}
+function restaurar(inp){const f=inp.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const d=JSON.parse(rd.result);if(!Array.isArray(d.clientes)||!d.config)throw 0;if(!confirm(MODO_NUBE?'Esto reemplaza la información EN LÍNEA (para todos los usuarios) por la de la copia. ¿Continuar?':'Esto reemplaza toda la información actual por la de la copia. ¿Continuar?'))return;delete d.config.sesion;const keep=MODO_NUBE?db.coordinadoras.filter(c=>usuariosNube.some(u=>u.coordId===c.id)&&!(d.coordinadoras||[]).some(x=>x.id===c.id)):[];db=Object.assign(baseVacia(),d);db.coordinadoras.push(...keep);migrar();guardar();toast('Copia restaurada');render()}catch(e){toast('El archivo no es una copia válida','err')}};rd.readAsText(f)}
+function reiniciar(){if(!confirm(MODO_NUBE?'Se borrará TODA la información EN LÍNEA para todos los usuarios. Esta acción no se puede deshacer. ¿Continuar?':'Se borrará TODA la información de la plataforma en este navegador. Esta acción no se puede deshacer. ¿Continuar?'))return;db=baseVacia();Archivos.limpiar().catch(()=>{});guardar();S.f.coord=S.f.cliente='';toast('Información eliminada');render()}
+
+/* ---------- 15. NAVEGACIÓN E INICIO ---------- */
+const VISTAS={dashboard:{t:'Dashboard',h:vDashboard,d:dDashboard},coordinadoras:{t:'Coordinadoras',h:vCoordinadoras},clientes:{t:'Base de clientes',h:vClientes},calendario:{t:'Calendario de visitas',h:vCalendario},
+  pendientes:{t:'Pendientes',h:vPendientes},provisiones:{t:'Provisiones',h:vProvisiones},facturacion:{t:'Facturación',h:vFacturacion},inicio:{t:'Inicio de operaciones',h:vInicio,d:dInicio},permisos:{t:'Novedades',h:vPermisos},documentos:{t:'Documentos',h:vDocumentos},
+  reportes:{t:'Reportes',h:vReportes,d:dReportes},config:{t:'Configuración',h:vConfig},alertas:{t:'Alertas',h:vAlertas}};
+function ir(v,mantener){if(!mantener)S.detalle='';S.vista=v;document.body.classList.remove('menu');cerrarModal();render();window.scrollTo(0,0)}
+function setF(k,v){S.f[k]=k==='cliente'||k==='coord'?v:(v===''?'':Number(v));if(k==='coord')S.f.cliente='';render()}
+function cambiarSesion(v){if(SESION.real!=='lider')return;SESION={...SESION,rol:v==='lider'?'lider':'coord',coordId:v==='lider'?'':v};S.f.coord=S.f.cliente='';S.detalle='';render();toast('Viendo como: '+usuario())}
+function renderTop(){const s=SESION;
+  $('#nav').innerHTML=Object.entries(VISTAS).filter(([k])=>k!=='alertas').map(([k,v])=>`<a class="${S.vista===k?'on':''}" onclick="ir('${k}')">${ico(k)}${v.t}</a>`).join('');
+  $('#titulo').textContent=VISTAS[S.vista].t;$('#logo').innerHTML=db.config.logo?`<img src="${db.config.logo}" alt="Logo">`:'S';
+  $('#filtros').innerHTML=`<select title="Año" onchange="setF('anio',this.value)">${opts(anios(),S.f.anio)}</select>
+   <select title="Mes" onchange="setF('mes',this.value)"><option value="">Todos los meses</option>${opts(MESES.map((m,i)=>[i+1,m]),S.f.mes)}</select>
+   <select title="Coordinadora" onchange="setF('coord',this.value)" ${s.rol==='coord'?'disabled':''}>${optsCoord(coordFiltro(),'Todas las coordinadoras')}</select>
+   <select title="Cliente" onchange="setF('cliente',this.value)">${optsCli(db.clientes.filter(c=>!coordFiltro()||c.coordId===coordFiltro()),S.f.cliente,'Todos los clientes')}</select>`;
+  $('#sesion').innerHTML=(SESION.real==='lider'?`<select title="Ver como" onchange="cambiarSesion(this.value)"><option value="lider">👤 Líder · ${esc(db.config.lider)}</option>${opts(db.coordinadoras.map(c=>[c.id,'Ver como · '+c.nombre]),s.coordId)}</select>`:`<span class="quien">👤 ${esc(usuario())}</span>`)+(MODO_NUBE?`<button class="btn btn-o btn-s" onclick="salir()" title="Cerrar sesión">Salir</button>`:'');
+  $('#n-al').textContent=alertas().length||'';$('#btn-imp').style.display=esLider()?'':'none'}
+function render(){
+  S.charts.forEach(c=>c.destroy());S.charts=[];
+  if(SESION.rol==='coord'&&!coord(SESION.coordId)){if(SESION.real==='coord'){$('#main').innerHTML='<div class="card"><p class="vacio">Tu usuario no está vinculado a una coordinadora. Pide al líder que lo revise en Configuración → Usuarios y accesos.</p></div>';renderTop();return}SESION={...SESION,rol:'lider',coordId:''}}
+  const v=VISTAS[S.vista];
+  $('#main').innerHTML=(hayDemo()?`<div class="banner">🧪 Estás viendo <b>datos de prueba</b> (marcados como DEMO).<span class="sp"></span>${esLider()?'<button class="btn btn-y btn-s" onclick="ir(\'clientes\')">Cargar mi Excel de clientes</button><button class="btn btn-k btn-s" onclick="eliminarDemo()">Eliminar datos de prueba</button>':''}</div>`:'')+(MODO_NUBE&&esLider()&&!db.clientes.length?`<div class="banner">☁ La base en línea está vacía. Importa el Excel de clientes o, en Configuración, restaura la copia (.json) que descargaste de la versión anterior.<span class="sp"></span><button class="btn btn-y btn-s" onclick="ir('clientes')">Importar Excel</button><button class="btn btn-k btn-s" onclick="ir('config')">Restaurar copia</button></div>`:'')+v.h();
+  renderTop();const tok=S.rtok=(S.rtok||0)+1;if(v.d)requestAnimationFrame(()=>{if(tok===S.rtok)v.d()})}
+/* ---------- 16. NUBE (Firebase) ----------
+   Si window.FIREBASE_CONFIG existe, la información se comparte en Firestore en tiempo real.
+   Cada registro es un documento {j: JSON del registro}; guardar() envía solo lo que cambió.
+   Sin FIREBASE_CONFIG la plataforma funciona como antes (datos en este navegador). */
+const COLS=['coordinadoras','clientes','visitas','pendientes','provisiones','facturas','novedades','permisos','documentos','auditoria'];
+const BASE={};let cargaNube=null,usuariosNube=[],usuariosCargados=false,desuscribir=[],tRemoto=0;
+const PRECARGA=[['lizeth.coordinadorquick@gmail.com','Lizeth Gonzalez'],['lorenacoordinadoraquick@gmail.com','Lorena Martinez'],['karolsuarezcoordinadorquick@gmail.com','Karol Suarez']];
+const cfgCompartida=()=>{const c={...db.config};delete c.sesion;return c};
+function estadoNube(e){const el=$('#nube');if(!el)return;el.innerHTML=!MODO_NUBE?'Datos guardados en este navegador':
+  {ok:`<span style="color:#7bd88f">●</span> En línea · ${esc(SESION.email)}`,guardando:'<span style="color:var(--y)">●</span> Guardando…',error:'<span style="color:#ff6b5e">●</span> Sin conexión: cambios sin guardar'}[e]||''}
+function subirNube(){const ops=[],u=SESION.email||'';
+  for(const col of COLS){const b=BASE[col]||(BASE[col]=new Map()),vistos=new Set();
+    for(const r of db[col]){const j=JSON.stringify(r);vistos.add(r.id);if(b.get(r.id)!==j){ops.push({col,id:r.id,data:{j,u,t:Date.now()}});b.set(r.id,j)}}
+    for(const id of [...b.keys()])if(!vistos.has(id)){ops.push({col,id,del:1});b.delete(id)}}
+  const cfg=JSON.stringify(cfgCompartida());if(BASE.config!==cfg){ops.push({col:'config',id:'general',data:{j:cfg,u,t:Date.now()}});BASE.config=cfg}
+  if(!ops.length)return;estadoNube('guardando');
+  Nube.lote(ops).then(()=>estadoNube('ok')).catch(e=>{console.error(e);estadoNube('error');
+    toast(e&&e.code==='permission-denied'?'Tu perfil no tiene permiso para guardar este cambio':'No se pudo guardar en la nube. Revisa tu conexión.','err')})}
+function aplicarNube(col,docs,pend){
+  if(col==='config'){const d=docs.find(x=>x.id==='general');if(d){BASE.config=d.data.j;db.config=Object.assign(baseVacia().config,JSON.parse(d.data.j))}}
+  else{const m=new Map(),arr=[];docs.forEach(d=>{try{arr.push(JSON.parse(d.data.j));m.set(d.id,d.data.j)}catch(e){}});
+    if(col==='auditoria')arr.sort((a,b)=>String(b.fecha).localeCompare(String(a.fecha)));db[col]=arr;BASE[col]=m}
+  _fx=null;
+  if(cargaNube!==true){if(cargaNube){cargaNube.add(col);if(cargaNube.size===COLS.length+1)nubeLista()}return}
+  if(!pend)refrescoRemoto()}
+/* Cambios de otros usuarios: se redibuja sin interrumpir a quien está escribiendo */
+const editando=()=>$('#modal').classList.contains('on')||(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)&&!!document.activeElement.closest('main'));
+function refrescoRemoto(){clearTimeout(tRemoto);tRemoto=setTimeout(()=>{if(editando()){S.pendRender=true;return}S.pendRender=false;render()},200)}
+document.addEventListener('focusout',()=>setTimeout(()=>{if(S.pendRender&&!editando()){S.pendRender=false;render()}},400));
+const logoHTML=t=>`<span class="logo" style="width:${t}px;height:${t}px;font-size:${t*.42}px;margin:0 auto 12px">${db&&db.config.logo?`<img src="${db.config.logo}" alt="">`:'S'}</span>`;
+function pantallaAcceso(html){const l=$('#acceso');l.innerHTML=html?`<div class="acc-card">${html}</div>`:'';l.style.display=html?'flex':'none'}
+function formLogin(msg){pantallaAcceso(`<form onsubmit="entrar(event)">${logoHTML(64)}<h2>Seguimiento de coordinadoras</h2><p class="hint" style="margin:4px 0 16px">Ingresa con tu correo y contraseña</p>
+  ${msg?`<div class="banner" style="background:#fdecea;border-color:var(--r)">${msg}</div>`:''}
+  <div style="display:grid;gap:12px;text-align:left">${campo('Correo',`<input name="email" type="email" required autocomplete="username">`)}${campo('Contraseña',`<input name="pass" type="password" required autocomplete="current-password">`)}</div>
+  <button class="btn btn-y" style="width:100%;justify-content:center;margin-top:16px;padding:11px">Ingresar</button>
+  <p style="margin:14px 0 0"><a class="hint" style="cursor:pointer;text-decoration:underline" onclick="olvide()">¿Olvidaste tu contraseña?</a></p></form>`)}
+async function entrar(e){e.preventDefault();const d=Object.fromEntries(new FormData(e.target)),b=e.target.querySelector('button');b.disabled=true;b.textContent='Ingresando…';
+  try{await Nube.login(d.email.trim().toLowerCase(),d.pass)}catch(err){formLogin(err&&err.code==='auth/too-many-requests'?'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.':'Correo o contraseña incorrectos.')}}
+async function olvide(){const e=prompt('Escribe tu correo y te enviaremos un enlace para crear una nueva contraseña:');if(!e)return;
+  try{await Nube.reset(e.trim().toLowerCase());alert('Listo. Revisa tu correo (también la carpeta de spam).')}catch(x){alert('No se pudo enviar el correo. Verifica que esté bien escrito.')}}
+function salir(){if(confirm('¿Cerrar sesión?'))Nube.salir()}
+async function sesionNube(u){desuscribir.forEach(f=>{try{f()}catch(e){}});desuscribir=[];usuariosCargados=false;usuariosNube=[];
+  if(!u){cargaNube=null;db=baseVacia();formLogin();return}
+  pantallaAcceso(`${logoHTML(64)}<h2>Cargando información…</h2><p class="hint">${esc(u.email)}</p>`);
+  let rol='lider',coordId='';
+  if(u.email!==LIDER_EMAIL){let r=null;try{r=await Nube.leer('usuarios',u.email)}catch(e){console.error(e)}
+    if(!r||r.rol!=='coord'){pantallaAcceso(`${logoHTML(64)}<h2>Sin acceso</h2><p>El usuario <b>${esc(u.email)}</b> no está habilitado en la plataforma.</p><p class="hint">Pide al líder que lo active en Configuración → Usuarios y accesos.</p><button class="btn btn-o" onclick="Nube.salir()">Salir</button>`);return}
+    rol='coord';coordId=r.coordId||''}
+  SESION={rol,coordId,email:u.email,real:rol};db=baseVacia();cargaNube=new Set();Object.keys(BASE).forEach(k=>delete BASE[k]);
+  ['config',...COLS].forEach(col=>desuscribir.push(Nube.escuchar(col,(docs,pend)=>aplicarNube(col,docs,pend),errorNube)));
+  if(rol==='lider')desuscribir.push(Nube.escuchar('usuarios',docs=>{usuariosNube=docs.map(d=>({email:d.id,...d.data})).sort((a,b)=>a.email.localeCompare(b.email));usuariosCargados=true;
+    if(cargaNube===true){asegurarUsuarios();if(S.vista==='config')refrescoRemoto()}},errorNube))}
+function errorNube(e){console.error(e);estadoNube('error');
+  if(cargaNube!==true)pantallaAcceso(`<h2>No se pudo cargar la información</h2><p class="hint">${e&&e.code==='permission-denied'?'Permiso denegado: revisa que las reglas de Firestore estén publicadas.':'Revisa tu conexión a internet.'}</p><button class="btn btn-y" onclick="location.reload()">Reintentar</button> <button class="btn btn-o" onclick="Nube.salir()">Salir</button>`)}
+function nubeLista(){cargaNube=true;pantallaAcceso('');if(SESION.real==='lider'){migrar();asegurarUsuarios()}render();estadoNube('ok')}
+/* Primera vez: crea las coordinadoras indicadas y les da acceso */
+function asegurarUsuarios(){if(SESION.real!=='lider'||cargaNube!==true||!usuariosCargados||db.config.usuariosIniciales)return;
+  PRECARGA.forEach(([email,nombre])=>{let c=db.coordinadoras.find(x=>!x.demo&&norm(x.nombre)===norm(nombre));
+    if(!c)c=crear('coordinadoras',{nombre,correo:email,telefono:'',foto:''},'Configuración',`Coordinadora ${nombre}`);
+    if(!usuariosNube.some(u=>u.email===email))Nube.poner('usuarios',email,{rol:'coord',coordId:c.id,nombre:c.nombre}).catch(e=>console.error(e))});
+  db.config.usuariosIniciales=true;guardar();render()}
+function cardUsuarios(){if(!MODO_NUBE||SESION.real!=='lider')return '';
+  return `<div class="card" style="margin-bottom:16px"><h3>👥 Usuarios y accesos</h3><p class="hint" style="margin-top:-6px">Cada correo debe estar creado también en Firebase → Authentication → Usuarios. El líder (${esc(LIDER_EMAIL)}) tiene acceso total; cada coordinadora ve solo sus clientes.</p>
+  <div class="tw"><table class="tb"><thead><tr><th>Correo</th><th>Coordinadora vinculada</th><th></th></tr></thead><tbody>
+  ${usuariosNube.map(u=>`<tr><td><b>${esc(u.email)}</b></td><td><select onchange="vincularUsuario('${esc(u.email)}',this.value)" style="max-width:280px">${optsCoord(u.coordId,'— Sin vincular —')}</select></td><td class="num"><button class="btn btn-d btn-s" onclick="quitarUsuario('${esc(u.email)}')">Quitar acceso</button></td></tr>`).join('')||'<tr><td colspan="3" class="vacio">Aún no hay coordinadoras con acceso.</td></tr>'}
+  </tbody></table></div>
+  <form class="bar" style="margin:12px 0 0" onsubmit="agregarUsuario(event)"><input name="email" type="email" required placeholder="correo@gmail.com" style="flex:1 1 220px"><select name="coordId" required style="flex:0 1 240px">${optsCoord('','Vincular a coordinadora…')}</select><button class="btn btn-y">+ Dar acceso</button></form></div>`}
+async function agregarUsuario(e){e.preventDefault();const d=Object.fromEntries(new FormData(e.target)),em=d.email.trim().toLowerCase();
+  if(em===LIDER_EMAIL)return toast('Ese correo es el del líder','err');
+  try{await Nube.poner('usuarios',em,{rol:'coord',coordId:d.coordId,nombre:nomCoord(d.coordId)});auditar('Configuración','Creación',`Acceso para ${em} (${nomCoord(d.coordId)})`);guardar();toast('Acceso creado. Recuerda crear el usuario en Firebase Authentication.')}catch(x){toast('No se pudo guardar el acceso','err')}}
+async function vincularUsuario(em,cid){try{await Nube.poner('usuarios',em,{rol:'coord',coordId:cid,nombre:nomCoord(cid)});auditar('Configuración','Modificación',`${em} vinculado a ${nomCoord(cid)}`);guardar();toast('Vinculación actualizada')}catch(x){toast('No se pudo guardar','err')}}
+async function quitarUsuario(em){if(!confirm(`¿Quitar el acceso de ${em}? Su información registrada se conserva.`))return;
+  try{await Nube.quitar('usuarios',em);auditar('Configuración','Eliminación',`Acceso retirado a ${em}`);guardar();toast('Acceso retirado')}catch(x){toast('No se pudo quitar','err')}}
+/* Migración v2: la facturación pasa a valor fijo por cliente + ajustes con novedad */
+function migrar(){if((db.version||1)>=2)return;const v={};db.facturas.filter(f=>f.demo).forEach(f=>(v[f.clienteId]=v[f.clienteId]||[]).push(f.valor));
+  db.clientes.forEach(c=>{if(c.demo&&!Number(c.valorMensual)&&v[c.id])c.valorMensual=Math.round(sum(v[c.id])/v[c.id].length/1e5)*1e5});
+  db.facturas=db.facturas.filter(f=>!f.demo);db.version=2;guardar()}
+
+/* ---------- ARRANQUE ---------- */
+if(window.Chart){Chart.defaults.font.family="'Manrope',system-ui,sans-serif";Chart.defaults.color='#555'}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')cerrarModal()});
+if(MODO_NUBE){db=baseVacia();pantallaAcceso(`${logoHTML(64)}<h2>Conectando…</h2>`);
+  const go=()=>Nube.onAuth(sesionNube);
+  if(window.Nube)go();else{addEventListener('nube-lista',go,{once:true});setTimeout(()=>{if(!window.Nube)pantallaAcceso('<h2>No se pudo conectar</h2><p class="hint">Revisa tu conexión a internet y vuelve a cargar la página.</p><button class="btn btn-y" onclick="location.reload()">Reintentar</button>')},20000)}}
+else{if(!db){db=baseVacia();sembrarDemo();guardar()}else db=Object.assign(baseVacia(),db);migrar();render();estadoNube()}
+</script>
+</body>
+</html>
